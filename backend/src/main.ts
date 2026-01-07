@@ -1,0 +1,27 @@
+import 'reflect-metadata';
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import * as dotenv from 'dotenv';
+import { AppModule } from './app.module';
+
+dotenv.config();
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, { cors: true });
+  app.enableShutdownHooks();
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+  await app.listen(port);
+  // eslint-disable-next-line no-console
+  console.log(`Backend listening on http://localhost:${port}`);
+}
+
+bootstrap();

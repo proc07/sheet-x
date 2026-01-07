@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bitable
+      POSTGRES_PASSWORD: bitable
+      POSTGRES_DB: bitable
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_bitable:/var/lib/postgresql/data
+volumes:
+  pgdata_bitable:
