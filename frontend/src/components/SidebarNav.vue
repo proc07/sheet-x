@@ -15,7 +15,7 @@
         <button
           v-if="item.children && !collapsed"
           type="button"
-          class="ml-auto rounded-md p-1 text-slate-400 hover:bg-slate-100"
+          class="ml-auto rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-slate-500 dark:hover:bg-slate-800"
           @click.stop="toggle(item.id)"
         >
           <i :class="isExpanded(item.id) ? 'pi pi-angle-down' : 'pi pi-angle-right'"></i>
@@ -24,7 +24,7 @@
 
       <div
         v-if="item.children && isExpanded(item.id) && !collapsed"
-        class="mt-1 ml-3 border-l border-slate-200/70 pl-2"
+        class="mt-1 ml-3 border-l border-slate-200/70 pl-2 dark:border-slate-700/70"
       >
         <SidebarNav
           :items="item.children"
@@ -78,7 +78,7 @@ function handleItemClick(item: NavItem) {
 function itemClass(item: NavItem) {
   const active = item.match ? item.match(props.activePath) : item.to === props.activePath;
   const compact = props.collapsed ? 'justify-center px-2' : '';
-  if (active) return `${compact} bg-slate-900/5 text-slate-900`;
-  return `${compact} text-slate-600 hover:bg-slate-100`;
+  if (active) return `${compact} bg-slate-900/5 text-slate-900 dark:bg-slate-800/70 dark:text-slate-100`;
+  return `${compact} text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/60`;
 }
 </script>

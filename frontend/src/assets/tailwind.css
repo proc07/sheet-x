@@ -23,15 +23,26 @@
       radial-gradient(700px 420px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%),
       #f8fafc;
   }
+
+  .dark body {
+    background:
+      radial-gradient(900px 500px at 10% 0%, rgba(99, 102, 241, 0.18), transparent 60%),
+      radial-gradient(700px 420px at 90% 20%, rgba(14, 165, 233, 0.16), transparent 55%),
+      #0f172a;
+  }
 }
 
 @layer components {
   .app-panel {
-    @apply rounded-xl border border-slate-200 bg-white/85 shadow-sm backdrop-blur;
+    @apply rounded-xl shadow-sm backdrop-blur;
+    border: 1px solid rgb(var(--app-border));
+    background-color: rgba(var(--app-surface) / var(--app-panel-alpha));
   }
 
   .app-toolbar {
-    @apply flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm;
+    @apply flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-sm;
+    border: 1px solid rgb(var(--app-border));
+    background-color: rgba(var(--app-surface) / var(--app-toolbar-alpha));
   }
 }
 

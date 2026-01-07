@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useWorkStore } from '../stores/work';
 import { useRouter } from 'vue-router';
 
@@ -65,11 +65,26 @@ const router = useRouter();
 
 const newWs = ref('');
 const newBase = ref('');
-const activeWorkspaceId = ref('');
+const activeWorkspaceId = computed({
+  get: () => work.currentWorkspaceId,
+  set: (value) => work.setCurrentWorkspace(value),
+});
 
 onMounted(async () => {
-  await work.loadWorkspaces();
+  if (work.workspaces.length === 0) {
+    await work.loadWorkspaces();
+  }
 });
+
+watch(
+  () => work.currentWorkspaceId,
+  async (id) => {
+    if (id) {
+      await work.loadBases(id);
+    }
+  },
+  { immediate: true }
+);
 
 async function reload() {
   await work.loadWorkspaces();
@@ -77,15 +92,13 @@ async function reload() {
 
 async function createWs() {
   if (!newWs.value.trim()) return;
-  const ws = await work.createWorkspace(newWs.value.trim());
+  await work.createWorkspace(newWs.value.trim());
   newWs.value = '';
-  activeWorkspaceId.value = ws.id;
-  await work.loadBases(ws.id);
 }
 
 async function selectWorkspace(id: string) {
   if (!id) return;
-  await work.loadBases(id);
+  activeWorkspaceId.value = id;
 }
 
 async function createBase() {

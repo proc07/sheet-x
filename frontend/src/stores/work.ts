@@ -17,6 +17,7 @@ export type RecordRow = { id: string; data: Record<string, any>; revision: numbe
 export const useWorkStore = defineStore('work', {
   state: () => ({
     workspaces: [] as Workspace[],
+    currentWorkspaceId: '' as string,
     bases: [] as Base[],
     tables: [] as Table[],
     fields: [] as Field[],
@@ -26,11 +27,21 @@ export const useWorkStore = defineStore('work', {
     async loadWorkspaces() {
       const { data } = await api.get('/workspaces');
       this.workspaces = data;
+      if (!this.currentWorkspaceId && this.workspaces.length > 0) {
+        this.currentWorkspaceId = this.workspaces[0].id;
+      }
+      if (this.currentWorkspaceId && !this.workspaces.some(ws => ws.id === this.currentWorkspaceId)) {
+        this.currentWorkspaceId = this.workspaces[0]?.id ?? '';
+      }
     },
     async createWorkspace(name: string) {
       const { data } = await api.post('/workspaces', { name });
       await this.loadWorkspaces();
+      this.currentWorkspaceId = data.id;
       return data as Workspace;
+    },
+    setCurrentWorkspace(id: string) {
+      this.currentWorkspaceId = id;
     },
     async loadBases(workspaceId: string) {
       const { data } = await api.get('/bases', { params: { workspaceId } });

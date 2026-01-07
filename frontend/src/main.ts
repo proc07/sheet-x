@@ -16,6 +16,9 @@ app
     ripple: true,
     theme: {
       preset: Aura,
+      options: {
+        darkModeSelector: 'system',
+      }
     },
   });
 
