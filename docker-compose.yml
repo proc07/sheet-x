@@ -2,12 +2,25 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: bitable
-      POSTGRES_PASSWORD: bitable
-      POSTGRES_DB: bitable
+      POSTGRES_USER: sheetx
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: sheet-x
     ports:
       - "5432:5432"
     volumes:
-      - pgdata_bitable:/var/lib/postgresql/data
+      - pgdata_sheet-x:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_sheet-x:/var/lib/pgadmin
 volumes:
-  pgdata_bitable:
+  pgdata_sheet-x:
+  pgadmin_sheet-x:

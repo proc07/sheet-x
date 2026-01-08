@@ -17,7 +17,7 @@ app
     theme: {
       preset: Aura,
       options: {
-        darkModeSelector: 'system',
+        darkModeSelector: '.dark',
       }
     },
   });

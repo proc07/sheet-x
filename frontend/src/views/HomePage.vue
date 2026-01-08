@@ -1,30 +1,5 @@
 <template>
   <div class="grid gap-4 lg:grid-cols-[360px_1fr]">
-    <Card class="app-panel">
-      <template #title>
-        <div class="flex items-center justify-between">
-          <span>Workspaces</span>
-          <Button size="small" label="刷新" @click="reload" />
-        </div>
-      </template>
-
-      <template #content>
-        <div class="flex gap-2 mb-3">
-          <InputText v-model="newWs" placeholder="新建 Workspace 名称" class="flex-1" />
-          <Button label="创建" @click="createWs" />
-        </div>
-
-        <Listbox
-          v-model="activeWorkspaceId"
-          :options="work.workspaces"
-          optionLabel="name"
-          optionValue="id"
-          class="w-full"
-          @update:modelValue="selectWorkspace"
-        />
-      </template>
-    </Card>
-
     <Card v-if="activeWorkspaceId" class="app-panel">
       <template #title>
         <div class="flex items-center justify-between">

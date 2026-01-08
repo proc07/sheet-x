@@ -23,4 +23,7 @@ declare module 'vue' {
     SidebarNav: typeof import('./src/components/SidebarNav.vue')['default']
     Tag: typeof import('primevue/tag')['default']
   }
+  export interface ComponentCustomProperties {
+    Tooltip: typeof import('primevue/tooltip')['default']
+  }
 }

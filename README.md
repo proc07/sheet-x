@@ -17,7 +17,9 @@
 在项目根目录执行：
 
 ```bash
-docker compose up -d
+启动：docker compose up -d
+仅停止容器：docker compose stop
+停止并移除容器：docker compose down
 ```
 
 ### 2) 启动后端

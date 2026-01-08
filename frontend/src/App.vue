@@ -23,7 +23,27 @@
                 </button>
 
                 <Popover ref="wsPopover">
-                  <div class="w-56">
+                  <div class="w-48">
+                    <div class="flex items-center justify-between pb-2 text-[11px] uppercase tracking-wide text-slate-400">
+                      <span>Workspaces</span>
+                      <button
+                        v-tooltip.top="'添加一个空间'"
+                        type="button"
+                        class="group relative inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                        @click="toggleWorkspaceCreate"
+                        >
+                        <i class="pi pi-plus text-[10px]"></i>
+                      </button>
+                    </div>
+                    <div v-if="showWorkspaceCreate" class="pb-2">
+                      <InputText
+                        v-model="newWorkspaceName"
+                        placeholder="输入空间名称 (按回车创建)"
+                        class="w-full"
+                        size="small"
+                        @keydown.enter.prevent="submitWorkspaceCreate"
+                      />
+                    </div>
                     <Listbox
                       :modelValue="work.currentWorkspaceId"
                       @update:modelValue="selectWorkspace"
@@ -31,32 +51,11 @@
                       optionLabel="name"
                       optionValue="id"
                       checkmark
-                      :highlightOnSelect="false"
                       class="w-full"
+                      emptyMessage="暂无工作空间"
                     />
                   </div>
-
-                  <!-- <div
-  class="mt-2 w-48 rounded-lg border border-slate-200 bg-white shadow-lg"
-  @click.stop
->
-  <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400">Workspaces</div>
-  <button
-    v-for="ws in "
-    :key="ws.id"
-    @click="selectWorkspace(ws.id)"
-    type="button"
-    class="flex w-full items-center justify-between px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
-  >
-    <span class="truncate">{{ ws.name }}</span>
-    <i v-if="ws.id === work.currentWorkspaceId" class="pi pi-check text-xs text-slate-500"></i>
-  </button>
-  <div v-if="work.workspaces.length === 0" class="px-3 py-2 text-sm text-slate-400">
-    暂无工作空间
-  </div>
-</div> -->
               </Popover>
-                
               </div>
             </div>
           </div>
@@ -74,12 +73,12 @@
           <InputText
             v-model="search"
             placeholder="搜索"
-            class="w-full h-10 pl-10 bg-slate-100/90 border border-slate-200/80 text-slate-700 placeholder:text-slate-400 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
+            class="w-full pl-9! bg-slate-100/90 border border-slate-200/80 text-slate-700 placeholder:text-slate-400 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         <button
           v-else
-          class="mb-4 flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-100/80 text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
+          class="mb-4 flex h-9 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-100/80 text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
           title="搜索"
         >
           <i class="pi pi-search"></i>
@@ -122,14 +121,14 @@
             <span>{{ pageTitle }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button class="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" title="通知">
+            <button class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" title="通知">
               <i class="pi pi-bell"></i>
             </button>
-            <button class="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" title="设置">
+            <button class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800" title="设置">
               <i class="pi pi-cog"></i>
             </button>
             <button
-              class="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               :title="isDark ? '切换浅色' : '切换深色'"
               @click="toggleDarkMode"
             >
@@ -305,5 +304,32 @@ onMounted(() => {
   }
   applyDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
 });
+
+// workspace creation
+const showWorkspaceCreate = ref(false);
+const newWorkspaceName = ref('');
+const creatingWorkspace = ref(false);
+
+function toggleWorkspaceCreate() {
+  showWorkspaceCreate.value = !showWorkspaceCreate.value;
+  if (!showWorkspaceCreate.value) {
+    newWorkspaceName.value = '';
+  }
+}
+
+async function submitWorkspaceCreate() {
+  const name = newWorkspaceName.value.trim();
+  if (!name || creatingWorkspace.value) return;
+
+  creatingWorkspace.value = true;
+
+  try {
+    await work.createWorkspace(name);
+    newWorkspaceName.value = '';
+    showWorkspaceCreate.value = false;
+  } finally {
+    creatingWorkspace.value = false;
+  }
+}
 
 </script>
