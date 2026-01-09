@@ -2,16 +2,14 @@
   <div>
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <div class="flex items-center gap-2">
-        <Button label="返回" @click="router.back()" />
         <h2 class="m-0">Table</h2>
-        <Tag :value="tableId" />
+        <Tag :value="resolvedTableId" />
       </div>
       <div class="flex gap-2">
-        <Button label="刷新" @click="reload" />
       </div>
     </div>
 
-    <div class="app-panel overflow-hidden mb-3">
+    <div class=" overflow-hidden mb-3">
       <div class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm overflow-x-auto">
         <button
           v-for="view in viewTabs"
@@ -23,10 +21,6 @@
         >
           <i :class="view.icon"></i>
           <span>{{ view.label }}</span>
-        </button>
-        <button class="ml-2 flex items-center gap-1 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100">
-          <i class="pi pi-plus"></i>
-          <span>新增视图</span>
         </button>
       </div>
 
@@ -68,7 +62,7 @@
       </div>
     </div>
 
-    <div class="app-panel p-2">
+    <div class=" p-2">
       <DataTable :value="work.records" class="w-full" showGridlines>
         <Column field="id" header="Record" :style="{ width: '220px' }" />
 
@@ -95,24 +89,26 @@
       </DataTable>
     </div>
 
-    <Message v-if="error" severity="error" :closable="false" class="mt-3 app-panel px-3 py-2">
+    <Message v-if="error" severity="error" :closable="false" class="mt-3  px-3 py-2">
       {{ error }}
     </Message>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from './components/CellEditor.vue';
 import { defaultOptionsForField } from '../utils/field';
 
+const props = defineProps<{ tableId?: string }>();
+
 const route = useRoute();
 const router = useRouter();
 const work = useWorkStore();
 
-const tableId = route.params.tableId as string;
+const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
 const newFieldName = ref('');
 const newFieldType = ref<Field['type']>('TEXT');
@@ -147,11 +143,18 @@ const toolbarActions = [
   { label: '行高', icon: 'pi pi-bars' },
 ];
 
-onMounted(async () => {
-  await reload();
-});
+watch(
+  () => resolvedTableId.value,
+  async (tableId) => {
+    if (!tableId) return;
+    await reload();
+  },
+  { immediate: true }
+);
 
 async function reload() {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
   error.value = '';
   try {
     await work.loadFields(tableId);
@@ -162,6 +165,8 @@ async function reload() {
 }
 
 async function createField() {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
   if (!newFieldName.value.trim()) return;
   const options = defaultOptionsForField(newFieldType.value);
   await work.createField(tableId, { name: newFieldName.value.trim(), type: newFieldType.value, options });
@@ -169,6 +174,8 @@ async function createField() {
 }
 
 async function createRecord() {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
   await work.createRecord(tableId);
 }
 

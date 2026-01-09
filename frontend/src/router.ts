@@ -10,7 +10,7 @@ export const router = createRouter({
   routes: [
     { path: '/login', component: LoginPage },
     { path: '/', component: HomePage },
-    { path: '/workspaces/:workspaceId/bases/:baseId', component: BasePage },
+    { path: '/workspaces/:workspaceId/bases/:baseId?', component: BasePage },
     { path: '/tables/:tableId', component: TablePage },
   ],
 });

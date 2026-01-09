@@ -1,6 +1,6 @@
 <template>
   <div class="grid gap-4 lg:grid-cols-[360px_1fr]">
-    <Card v-if="activeWorkspaceId" class="app-panel">
+    <Card v-if="activeWorkspaceId" class="">
       <template #title>
         <div class="flex items-center justify-between">
           <span>Bases</span>
@@ -24,7 +24,7 @@
       </template>
     </Card>
 
-    <Message v-else severity="info" :closable="false" class="app-panel px-4 py-3">
+    <Message v-else severity="info" :closable="false" class=" px-4 py-3">
       请选择或创建一个 Workspace
     </Message>
   </div>

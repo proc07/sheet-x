@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTableDto } from './dto';
+import { CreateTableDto, UpdateTableDto } from './dto';
 
 @Injectable()
 export class TablesService {
@@ -49,5 +49,21 @@ export class TablesService {
     await this.assertBaseReadable(userId, table.baseId);
 
     return table;
+  }
+
+  async update(userId: string, tableId: string, dto: UpdateTableDto) {
+    const table = await this.prisma.table.findUnique({
+      where: { id: tableId },
+      select: { id: true, baseId: true },
+    });
+    if (!table) throw new ForbiddenException('Table not found');
+    const { role } = await this.assertBaseReadable(userId, table.baseId);
+    if (role === 'VIEWER') throw new ForbiddenException('No write permission');
+
+    return this.prisma.table.update({
+      where: { id: tableId },
+      data: { name: dto.name },
+      select: { id: true, name: true, createdAt: true },
+    });
   }
 }

@@ -5,7 +5,7 @@
         class="hidden flex-col border-r border-slate-200/70 bg-white/70 py-4 backdrop-blur lg:flex dark:border-slate-800/70 dark:bg-slate-900/70"
         :class="sidebarCollapsed ? 'w-20 px-3' : 'w-64 px-4'"
       >
-        <div class="mb-5 flex items-start justify-between gap-2 slide-in">
+        <div class="relative mb-5 flex items-start justify-between gap-2 slide-in">
           <div class="flex items-start gap-3">
             <div class="h-9 w-9 rounded-lg bg-slate-900 dark:bg-amber-50 text-white dark:text-black flex items-center justify-center text-sm font-semibold">
               SX
@@ -18,7 +18,7 @@
                   class="group mt-1 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   @click="toggleWorkspaceMenu"
                 >
-                  <span class="max-w-[150px] truncate">{{ currentWorkspaceLabel }} 工作空间</span>
+                  <span class="max-w-37.5 truncate">{{ currentWorkspaceLabel }} 工作空间</span>
                   <i class="pi pi-angle-down text-[10px] text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"></i>
                 </button>
 
@@ -60,7 +60,7 @@
             </div>
           </div>
           <button
-            class="flex align-center rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            class="absolute z-[-1] -right-2 top-1/2 -translate-y-1/2 flex align-center rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             :title="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
             @click="toggleSidebar"
           >
@@ -91,25 +91,57 @@
           :expanded-keys="expandedNav"
           @toggle="toggleNav"
         />
-
-        <div v-if="!sidebarCollapsed" class="mt-6 text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500">常用</div>
-        <div class="mt-2">
-          <SidebarNav
-            :items="secondaryNav"
-            :active-path="route.path"
-            :collapsed="sidebarCollapsed"
-            :expanded-keys="expandedNav"
-            @toggle="toggleNav"
-          />
+        <div v-if="!sidebarCollapsed">
+          <div class="mt-6 text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500">常用</div>
+          <div class="mt-2">
+            <SidebarNav
+              :items="secondaryNav"
+              :active-path="route.path"
+              :collapsed="sidebarCollapsed"
+              :expanded-keys="expandedNav"
+              @toggle="toggleNav"
+            />
+          </div>
         </div>
 
-        <div class="mt-auto pt-4 text-xs text-slate-400 dark:text-slate-500">
-          <div class="flex items-center justify-between" v-if="!sidebarCollapsed">
-            <span>新建</span>
-            <i class="pi pi-plus"></i>
+        <div class="mt-auto pt-4 text-slate-400 dark:text-slate-500">
+          <div
+            v-if="!sidebarCollapsed"
+            class="border-t border-slate-200/70 pt-3 dark:border-slate-800/70"
+          >
+            <div class="flex flex-col-reverse gap-3">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between text-sm font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
+                :aria-expanded="createExpanded"
+                @click="toggleCreateMenu"
+              >
+                <span>新建</span>
+                <i :class="!createExpanded ? 'pi pi-angle-up' : 'pi pi-angle-down'"></i>
+              </button>
+              <Transition name="create-expand">
+                <div v-show="createExpanded" class="space-y-1">
+                  <button
+                    v-for="item in createItems"
+                    :key="item.id"
+                    type="button"
+                    class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70"
+                  >
+                    <i :class="[item.icon, item.color]" class="text-lg w-5 inline-flex justify-center"></i>
+                    <span class="truncate">{{ item.label }}</span>
+                  </button>
+                </div>
+              </Transition>
+            </div>
           </div>
           <div v-else class="flex items-center justify-center">
-            <i class="pi pi-plus text-slate-500 dark:text-slate-400"></i>
+            <button
+              type="button"
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100/80 text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400"
+              title="新建"
+            >
+              <i class="pi pi-plus"></i>
+            </button>
           </div>
         </div>
       </aside>
@@ -138,7 +170,7 @@
           </div>
         </header>
 
-        <main class="flex-1 min-w-0 overflow-auto px-4 py-4 lg:px-6">
+        <main class="flex-1 min-w-0 overflow-auto">
           <div class="fade-in">
             <router-view />
           </div>
@@ -186,26 +218,25 @@ type NavItem = {
   children?: NavItem[];
 };
 
-const primaryNav: NavItem[] = [
+const baseNavItems = computed<NavItem[]>(() => {
+  const workspaceId = work.currentWorkspaceId;
+  if (!workspaceId || work.basesWorkspaceId !== workspaceId) return [];
+  return work.bases.map((base) => ({
+    id: `base-${base.id}`,
+    label: base.name,
+    icon: 'pi pi-table',
+    to: `/workspaces/${workspaceId}/bases/${base.id}`,
+    match: (path: string) => path.startsWith(`/workspaces/${workspaceId}/bases/${base.id}`),
+  }));
+});
+
+const primaryNav = computed<NavItem[]>(() => [
   {
     id: 'tables',
     label: '数据表',
-    icon: 'pi pi-table',
-    to: '/',
+    icon: 'pi pi-database',
     match: (path: string) => path === '/' || path.startsWith('/workspaces') || path.startsWith('/tables'),
-    children: [
-      { id: 'tables-customers', label: '客户表', icon: 'pi pi-id-card', to: '/' },
-      {
-        id: 'tables-sales',
-        label: '销售线索',
-        icon: 'pi pi-briefcase',
-        children: [
-          { id: 'tables-sales-q1', label: 'Q1 清单', icon: 'pi pi-calendar' },
-          { id: 'tables-sales-q2', label: 'Q2 清单', icon: 'pi pi-calendar' },
-        ],
-      },
-      { id: 'tables-orders', label: '订单表', icon: 'pi pi-list' },
-    ],
+    children: baseNavItems.value
   },
   {
     id: 'dashboard',
@@ -217,10 +248,6 @@ const primaryNav: NavItem[] = [
         id: 'dashboard-team',
         label: '团队看板',
         icon: 'pi pi-th-large',
-        children: [
-          { id: 'dashboard-team-dev', label: '研发', icon: 'pi pi-code' },
-          { id: 'dashboard-team-sales', label: '销售', icon: 'pi pi-tags' },
-        ],
       },
     ],
   },
@@ -233,12 +260,22 @@ const primaryNav: NavItem[] = [
       { id: 'workflow-approval', label: '审批', icon: 'pi pi-check-square' },
     ],
   },
-];
+]);
 
 const secondaryNav: NavItem[] = [
   { id: 'shortcuts-opps', label: '商机表', icon: 'pi pi-briefcase' },
   { id: 'shortcuts-orders', label: '订单表', icon: 'pi pi-list' },
   { id: 'shortcuts-dashboard', label: '仪表盘 2', icon: 'pi pi-chart-bar' },
+];
+const createExpanded = ref(false);
+const createItems = [
+  { id: 'create-import-excel', label: '导入 Excel', icon: 'pi pi-file-excel', color: 'text-emerald-600' },
+  { id: 'create-table', label: '数据表', icon: 'pi pi-table', color: 'text-violet-500' },
+  { id: 'create-form', label: '收集表', icon: 'pi pi-inbox', color: 'text-orange-500' },
+  { id: 'create-dashboard', label: '仪表盘', icon: 'pi pi-chart-pie', color: 'text-blue-500' },
+  { id: 'create-workflow', label: '工作流', icon: 'pi pi-share-alt', color: 'text-purple-500' },
+  { id: 'create-doc', label: '文档', icon: 'pi pi-file', color: 'text-sky-500' },
+  { id: 'create-folder', label: '文件夹', icon: 'pi pi-folder', color: 'text-indigo-500' },
 ];
 
 const pageTitle = computed(() => {
@@ -250,6 +287,9 @@ const pageTitle = computed(() => {
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value;
+  if (sidebarCollapsed.value) {
+    createExpanded.value = false;
+  }
 }
 
 function toggleWorkspaceMenu(event: MouseEvent) {
@@ -285,12 +325,42 @@ function toggleDarkMode() {
   applyDarkMode(!isDark.value);
 }
 
+function toggleCreateMenu() {
+  createExpanded.value = !createExpanded.value;
+}
+
 watch(
   () => auth.token,
   async (token) => {
     if (!token) return;
     if (work.workspaces.length === 0) {
       await work.loadWorkspaces();
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => sidebarCollapsed.value,
+  (collapsed) => {
+    if (collapsed) {
+      createExpanded.value = false;
+    }
+  }
+);
+
+watch(
+  () => work.currentWorkspaceId,
+  async (workspaceId) => {
+    if (!auth.token || !workspaceId) return;
+
+    await work.loadBases(workspaceId);
+    const nextBaseId = work.bases[0]?.id;
+    const targetPath = nextBaseId
+      ? `/workspaces/${workspaceId}/bases/${nextBaseId}`
+      : `/workspaces/${workspaceId}/bases`;
+    if (router.currentRoute.value.path !== targetPath) {
+      router.replace(targetPath);
     }
   },
   { immediate: true }
@@ -333,3 +403,25 @@ async function submitWorkspaceCreate() {
 }
 
 </script>
+
+<style scoped>
+.create-expand-enter-active,
+.create-expand-leave-active {
+  overflow: hidden;
+  transition: max-height 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+.create-expand-enter-from,
+.create-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.create-expand-enter-to,
+.create-expand-leave-from {
+  max-height: 480px;
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

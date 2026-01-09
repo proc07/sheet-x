@@ -35,12 +35,6 @@
 }
 
 @layer components {
-  .app-panel {
-    @apply rounded-xl shadow-sm backdrop-blur;
-    border: 1px solid rgb(var(--app-border));
-    background-color: rgba(var(--app-surface) / var(--app-panel-alpha));
-  }
-
   .app-toolbar {
     @apply flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-sm;
     border: 1px solid rgb(var(--app-border));

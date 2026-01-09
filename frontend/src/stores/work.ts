@@ -1,6 +1,20 @@
 import { defineStore } from 'pinia';
 import { api } from '../api';
 
+const WORKSPACE_STORAGE_KEY = 'workspace:lastSelectedId';
+
+function loadStoredWorkspaceId() {
+  return localStorage.getItem(WORKSPACE_STORAGE_KEY) || '';
+}
+
+function persistWorkspaceId(id: string) {
+  if (id) {
+    localStorage.setItem(WORKSPACE_STORAGE_KEY, id);
+    return;
+  }
+  localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+}
+
 export type Workspace = { id: string; name: string; createdAt: string };
 export type Base = { id: string; name: string; createdAt: string };
 export type Table = { id: string; name: string; createdAt: string };
@@ -18,6 +32,7 @@ export const useWorkStore = defineStore('work', {
   state: () => ({
     workspaces: [] as Workspace[],
     currentWorkspaceId: '' as string,
+    basesWorkspaceId: '' as string,
     bases: [] as Base[],
     tables: [] as Table[],
     fields: [] as Field[],
@@ -27,25 +42,48 @@ export const useWorkStore = defineStore('work', {
     async loadWorkspaces() {
       const { data } = await api.get('/workspaces');
       this.workspaces = data;
-      if (!this.currentWorkspaceId && this.workspaces.length > 0) {
-        this.currentWorkspaceId = this.workspaces[0].id;
+      let nextWorkspaceId = this.currentWorkspaceId;
+      if (!nextWorkspaceId) {
+        const storedWorkspaceId = loadStoredWorkspaceId();
+        if (storedWorkspaceId) {
+          nextWorkspaceId = storedWorkspaceId;
+        }
       }
-      if (this.currentWorkspaceId && !this.workspaces.some(ws => ws.id === this.currentWorkspaceId)) {
-        this.currentWorkspaceId = this.workspaces[0]?.id ?? '';
+      if (nextWorkspaceId && !this.workspaces.some(ws => ws.id === nextWorkspaceId)) {
+        nextWorkspaceId = '';
+      }
+      if (!nextWorkspaceId && this.workspaces.length > 0) {
+        nextWorkspaceId = this.workspaces[0].id;
+      }
+      if (nextWorkspaceId !== this.currentWorkspaceId) {
+        this.setCurrentWorkspace(nextWorkspaceId);
+      } else {
+        persistWorkspaceId(nextWorkspaceId);
       }
     },
     async createWorkspace(name: string) {
       const { data } = await api.post('/workspaces', { name });
       await this.loadWorkspaces();
-      this.currentWorkspaceId = data.id;
+      this.setCurrentWorkspace(data.id);
       return data as Workspace;
     },
     setCurrentWorkspace(id: string) {
+      if (this.currentWorkspaceId === id) {
+        persistWorkspaceId(id);
+        return;
+      }
       this.currentWorkspaceId = id;
+      this.basesWorkspaceId = '';
+      this.bases = [];
+      persistWorkspaceId(id);
     },
     async loadBases(workspaceId: string) {
+      this.basesWorkspaceId = workspaceId;
+      this.bases = [];
       const { data } = await api.get('/bases', { params: { workspaceId } });
-      this.bases = data;
+      if (this.basesWorkspaceId === workspaceId) {
+        this.bases = data;
+      }
     },
     async createBase(workspaceId: string, name: string) {
       const { data } = await api.post('/bases', { workspaceId, name });
@@ -59,6 +97,14 @@ export const useWorkStore = defineStore('work', {
     async createTable(baseId: string, name: string) {
       const { data } = await api.post('/tables', { baseId, name });
       await this.loadTables(baseId);
+      return data as Table;
+    },
+    async renameTable(tableId: string, name: string) {
+      const { data } = await api.patch(`/tables/${tableId}`, { name });
+      const idx = this.tables.findIndex(table => table.id === tableId);
+      if (idx >= 0) {
+        this.tables[idx] = { ...this.tables[idx], ...data };
+      }
       return data as Table;
     },
     async loadFields(tableId: string) {

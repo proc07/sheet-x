@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <Card class="app-panel">
+    <Card class="">
       <template #title>
         <div class="flex items-center justify-between">
           <span>登录 / 注册</span>
