@@ -66,4 +66,19 @@ export class TablesService {
       select: { id: true, name: true, createdAt: true },
     });
   }
+
+  async remove(userId: string, tableId: string) {
+    const table = await this.prisma.table.findUnique({
+      where: { id: tableId },
+      select: { id: true, baseId: true },
+    });
+    if (!table) throw new ForbiddenException('Table not found');
+    const { role } = await this.assertBaseReadable(userId, table.baseId);
+    if (role === 'VIEWER') throw new ForbiddenException('No write permission');
+
+    return this.prisma.table.delete({
+      where: { id: tableId },
+      select: { id: true },
+    });
+  }
 }

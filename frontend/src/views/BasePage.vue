@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="overflow-hidden">
-      <div class="relative flex items-end gap-2  bg-slate-50/80 pt-1">
+      <div class="relative flex items-center gap-2 bg-slate-50/80 pr-2">
         <button
           type="button"
           class="h-full w-10 absolute z-11 bg-gradient-to-right-f8f9fb self-center transition"
@@ -10,66 +10,98 @@
         >
           <i @click="scrollTabsToStart" class="pi pi-caret-left rounded-md hover:bg-slate-200 p-1"></i>
         </button>
-        <div ref="tabScroll" class="tab-scroll min-w-0 flex-1 overflow-x-auto" @scroll="updateScrollState">
-          <div class="flex items-center whitespace-nowrap" role="tablist" aria-label="表格列表">
-            <template v-for="(table, index) in work.tables" :key="table.id">
-              <button
-                type="button"
-                role="tab"
-                :aria-selected="table.id === activeTableId"
-                class="relative inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border border-transparent"
-                :class="table.id === activeTableId
-                  ? 'bg-white text-slate-900 border-slate-200/80 border-b-0 rounded-t-lg rounded-b-none shadow-sm z-10 after:absolute after:left-0 after:right-0 after:-bottom-px after:h-px after:bg-white'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/60 rounded-md'"
-                @click="setActiveTable(table.id)"
-                @dblclick.stop="startEditing(table)"
-              >
-                <template v-if="editingTableId === table.id">
-                  <input
-                    :ref="setEditingInputRef"
-                    v-model="editingName"
-                    type="text"
-                    class="h-7 min-w-[9rem] w-40 rounded-md border border-slate-200/80 bg-white px-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none"
-                    @click.stop
-                    @keydown.enter.prevent="commitEditing"
-                    @keydown.esc.prevent="cancelEditing"
-                    @blur="commitEditing"
-                  />
-                </template>
-                <template v-else>
-                  <i
-                    class="pi pi-table"
-                    :class="table.id === activeTableId ? 'text-green-500' : 'text-slate-400'"
-                  ></i>
-                  <span class="max-w-40 truncate">{{ table.name }}</span>
-                  <Button
-                    v-if="table.id === activeTableId && editingTableId !== table.id"
-                    class="w-5! h-5!"
-                    icon="pi pi-ellipsis-h"
-                    text
-                    rounded
-                    size="small"
-                    aria-label="表格操作"
-                    @click.stop="openTableMenu($event, table)"
-                  />
-                </template>
-              </button>
-              <span class="mx-2 h-4 flex-[0_0_1px] w-px bg-slate-200/80"></span>
-            </template>
-            <button @click="toggleCreatePopover" class="flex items-center gap-1 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100">
-              <i class="pi pi-plus"></i>
-              <span>新增</span>
-            </button>
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+          <div ref="tabScroll" class="tab-scroll min-w-0 flex-1 overflow-x-auto" @scroll="updateScrollState">
+            <div class="flex items-center whitespace-nowrap pr-2" role="tablist" aria-label="表格列表">
+              <template v-for="(table, index) in work.tables" :key="table.id">
+                <button
+                  type="button"
+                  role="tab"
+                  :data-table-id="table.id"
+                  :aria-selected="table.id === activeTableId"
+                  class="relative inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border border-transparent group"
+                  :class="table.id === activeTableId
+                    ? 'bg-white text-slate-900 border-slate-200/80 border-b-0 rounded-t-lg rounded-b-none shadow-sm z-10 after:absolute after:left-0 after:right-0 after:-bottom-px after:h-px after:bg-white'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/60 rounded-md'"
+                  @click="setActiveTable(table.id)"
+                  @dblclick.stop="startEditing(table)"
+                >
+                  <template v-if="editingTableId === table.id">
+                    <input
+                      :ref="setEditingInputRef"
+                      v-model="editingName"
+                      type="text"
+                      class="h-5 w-32 rounded-md border border-slate-200/80 bg-white px-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none"
+                      @click.stop
+                      @keydown.enter.prevent="commitEditing"
+                      @keydown.esc.prevent="cancelEditing"
+                      @blur="commitEditing"
+                    />
+                  </template>
+                  <template v-else>
+                    <i
+                      class="pi pi-table transition-colors"
+                      :class="table.id === activeTableId ? 'text-green-500' : 'text-slate-400 group-hover:text-green-500'"
+                    ></i>
+                    <span class="max-w-40 truncate">{{ table.name }}</span>
+                    <Button
+                      v-if="table.id === activeTableId && editingTableId !== table.id"
+                      class="w-5! h-5!"
+                      icon="pi pi-ellipsis-h"
+                      text
+                      rounded
+                      size="small"
+                      aria-label="表格操作"
+                      @click.stop="openTableMenu($event, table)"
+                    />
+                  </template>
+                </button>
+                <span v-if="index < work.tables.length - 1" class="mx-2 h-4 flex-[0_0_1px] w-px bg-slate-200/80"></span>
+              </template>
+              <div class="flex items-center" v-if="!tabsOverflow">
+                <span class="mx-2 h-4 flex-[0_0_1px] w-px bg-slate-200/80"></span>
+                <button
+                  type="button"
+                  class="h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
+                  aria-label="新增表格"
+                  @click="toggleCreatePopover"
+                >
+                  <i class="pi pi-plus"></i>
+                </button>
+              </div>
+            </div>
           </div>
+          <button
+            type="button"
+            class="h-8 w-8 self-center transition"
+            v-show="canScrollRight"
+            aria-label="滚动到末尾"
+          >
+            <i @click="scrollTabsToEnd" class="pi pi-caret-right rounded-md hover:bg-slate-200 p-1"></i>
+          </button>
         </div>
-        <button
-          type="button"
-          class="h-8 w-8 self-center transition"
-          v-show="canScrollRight"
-          aria-label="滚动到末尾"
+        <div
+          v-if="tabsOverflow"
+          class="h-[28px] flex items-center rounded-md border border-b-0 border-slate-200/80 bg-white/90 shadow-sm"
         >
-          <i @click="scrollTabsToEnd" class="pi pi-caret-right rounded-md hover:bg-slate-200 p-1"></i>
-        </button>
+          <button
+            type="button"
+            class="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800"
+            @click="toggleAllViewsPopover"
+          >
+            <span>全部视图</span>
+            <i class="pi pi-angle-down text-[11px]"></i>
+          </button>
+          <span class="mx-1 h-4 w-px bg-slate-200/80"></span>
+          <button
+            type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
+            aria-label="新增表格"
+            @click="toggleCreatePopover"
+          >
+            <i class="pi pi-plus"></i>
+          </button>
+        </div>
       </div>
 
       <div v-if="activeTable" class="p-4 bg-white">
@@ -100,15 +132,38 @@
       </div>
     </Popover>
 
+    <Popover ref="allViewsPopover" :pt="{ content: { class: 'p-0!' } }">
+      <div class="w-64">
+        <Listbox
+          :modelValue="activeTableId"
+          :options="work.tables"
+          optionLabel="name"
+          optionValue="id"
+          filter
+          filterPlaceholder="搜索视图"
+          emptyMessage="暂无视图"
+          class="w-full border-0!"
+          @update:modelValue="selectTableFromList"
+        >
+        <i class="pi pi-table transition-colors" :class="'text-green-500'"></i>
+      </Listbox>
+      </div>
+    </Popover>
+
+    <ConfirmDialog />
     <Menu ref="tableMenu" :model="tableMenuItems" popup />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { VNodeRef } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useWorkStore, type Table } from '../stores/work';
 import TablePage from './TablePage.vue';
+import { useConfirm } from 'primevue/useconfirm';
+
+const confirm = useConfirm();
 
 const route = useRoute();
 const router = useRouter();
@@ -118,12 +173,14 @@ const baseId = computed(() => (route.params.baseId as string) || '');
 const newTable = ref('');
 const activeTableId = ref('');
 const createPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const allViewsPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const tableMenu = ref<{ toggle: (event: Event) => void } | null>(null);
 const menuTable = ref<Table | null>(null);
 const activeTable = computed(() => work.tables.find((table) => table.id === activeTableId.value) ?? null);
 const tabScroll = ref<HTMLDivElement | null>(null);
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
+const tabsOverflow = ref(false);
 const editingTableId = ref('');
 const editingName = ref('');
 const editingOriginalName = ref('');
@@ -185,19 +242,34 @@ watch(
 );
 
 const tableMenuItems = computed(() => [
-  {
-    label: '打开表格',
-    icon: 'pi pi-external-link',
-    command: () => {
-      if (menuTable.value) openTable(menuTable.value.id);
-    },
-  },
-  { separator: true },
-  { label: '重命名', icon: 'pi pi-pencil', disabled: true },
+  { label: '设置为首个标签页', icon: 'pi pi-arrow-left', disabled: true },
+  { label: '重命名', icon: 'pi pi-pencil', command: () => startEditing(menuTable.value!) },
   { label: '复制表格', icon: 'pi pi-copy', disabled: true },
   { label: '保护表格', icon: 'pi pi-lock', disabled: true },
   { separator: true },
-  { label: '删除表格', icon: 'pi pi-trash', disabled: true },
+  { label: '删除表格', icon: 'pi pi-trash', command: () => {
+    const table = menuTable.value;
+    if (!table) return;
+    confirm.require({
+      message: `确认要删除视图 "${table.name}" 吗？此操作无法撤销。`,
+      header: '删除表格',
+      acceptLabel: '删除',
+      rejectLabel: '取消',
+      rejectClass: 'p-button-secondary',
+      acceptClass: 'p-button-danger',
+      accept: async () => {
+        try {
+          await work.deleteTable(table.id);
+          if (activeTableId.value === table.id) {
+            activeTableId.value = '';
+          }
+          menuTable.value = null;
+        } catch (error) {
+          console.error('Failed to delete table', error);
+        }
+      },
+    });
+  }},
 ]);
 
 function updateScrollState() {
@@ -205,11 +277,13 @@ function updateScrollState() {
   if (!el) {
     canScrollLeft.value = false;
     canScrollRight.value = false;
+    tabsOverflow.value = false;
     return;
   }
   const maxScrollLeft = el.scrollWidth - el.clientWidth;
   canScrollLeft.value = el.scrollLeft > 0;
   canScrollRight.value = el.scrollLeft < maxScrollLeft - 1;
+  tabsOverflow.value = maxScrollLeft > 0;
 }
 
 function scrollTabsToStart() {
@@ -241,6 +315,13 @@ async function createTable() {
 function setActiveTable(tableId: string) {
   if (!tableId) return;
   activeTableId.value = tableId;
+}
+
+function scrollTabIntoView(tableId: string) {
+  const el = tabScroll.value;
+  if (!el) return;
+  const tab = el.querySelector<HTMLElement>(`[data-table-id="${tableId}"]`);
+  tab?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 }
 
 function startEditing(table: Table) {
@@ -280,6 +361,8 @@ async function commitEditing() {
   } finally {
     editingSaving.value = false;
     resetEditing();
+    await nextTick();
+    updateScrollState();
   }
 }
 
@@ -291,6 +374,7 @@ function cancelEditing() {
     target.name = editingOriginalName.value;
   }
   resetEditing();
+  nextTick(() => updateScrollState());
 }
 
 function resetEditing() {
@@ -300,9 +384,9 @@ function resetEditing() {
   editingInput.value = null;
 }
 
-function setEditingInputRef(el: HTMLInputElement | null) {
-  editingInput.value = el;
-}
+const setEditingInputRef: VNodeRef = (el) => {
+  editingInput.value = el instanceof HTMLInputElement ? el : null;
+};
 
 function openTable(tableId: string) {
   router.push(`/tables/${tableId}`);
@@ -314,6 +398,17 @@ function toggleCreatePopover(event: MouseEvent) {
 
 function closeCreatePopover() {
   createPopover.value?.hide?.();
+}
+
+function toggleAllViewsPopover(event: MouseEvent) {
+  allViewsPopover.value?.toggle(event);
+}
+
+function selectTableFromList(tableId: string) {
+  if (!tableId) return;
+  setActiveTable(tableId);
+  allViewsPopover.value?.hide?.();
+  nextTick(() => scrollTabIntoView(tableId));
 }
 
 function openTableMenu(event: MouseEvent, table: Table) {

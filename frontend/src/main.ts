@@ -6,6 +6,8 @@ import 'primeicons/primeicons.css';
 import './assets/tailwind.css';
 import App from './App.vue';
 import { router } from './router';
+import DialogService from 'primevue/dialogservice';
+import ConfirmationService from 'primevue/confirmationservice';
 
 const app = createApp(App);
 
@@ -20,6 +22,8 @@ app
         darkModeSelector: '.dark',
       }
     },
-  });
+  })
+  .use(DialogService)
+  .use(ConfirmationService);
 
 app.mount('#app');

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, JwtUser } from '../common/user.decorator';
 import { CreateTableDto, UpdateTableDto } from './dto';
@@ -27,5 +27,10 @@ export class TablesController {
   @Patch(':tableId')
   update(@CurrentUser() user: JwtUser, @Param('tableId') tableId: string, @Body() dto: UpdateTableDto) {
     return this.svc.update(user.sub, tableId, dto);
+  }
+
+  @Delete(':tableId')
+  remove(@CurrentUser() user: JwtUser, @Param('tableId') tableId: string) {
+    return this.svc.remove(user.sub, tableId);
   }
 }

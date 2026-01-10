@@ -107,6 +107,10 @@ export const useWorkStore = defineStore('work', {
       }
       return data as Table;
     },
+    async deleteTable(tableId: string) {
+      await api.delete(`/tables/${tableId}`);
+      this.tables = this.tables.filter(table => table.id !== tableId);
+    },
     async loadFields(tableId: string) {
       const { data } = await api.get('/fields', { params: { tableId } });
       this.fields = data;

@@ -1,30 +1,16 @@
 <template>
   <div>
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
-        <h2 class="m-0">Table</h2>
+        <h2 class="m-0">Table ID:</h2>
         <Tag :value="resolvedTableId" />
       </div>
       <div class="flex gap-2">
       </div>
     </div>
 
-    <div class=" overflow-hidden mb-3">
-      <div class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm overflow-x-auto">
-        <button
-          v-for="view in viewTabs"
-          :key="view.id"
-          type="button"
-          class="flex items-center gap-2 rounded-md px-2.5 py-1 transition"
-          :class="activeView === view.id ? 'bg-slate-900/5 text-slate-900' : 'text-slate-500 hover:bg-slate-100'"
-          @click="activeView = view.id"
-        >
-          <i :class="view.icon"></i>
-          <span>{{ view.label }}</span>
-        </button>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm">
+    <div class="overflow-hidden mb-3">
+      <div class="flex flex-wrap items-center gap-2 border-b border-slate-200/80 py-2 text-sm">
         <button
           v-for="action in toolbarActions"
           :key="action.label"
@@ -122,16 +108,6 @@ const fieldTypeOptions = [
   { label: '单选', value: 'SINGLE_SELECT' },
   { label: '多选', value: 'MULTI_SELECT' },
 ];
-
-const viewTabs = [
-  { id: 'grid', label: '表格', icon: 'pi pi-table' },
-  { id: 'board', label: '看板', icon: 'pi pi-window-maximize' },
-  { id: 'map', label: '地图视图', icon: 'pi pi-map' },
-  { id: 'print', label: '排版打印', icon: 'pi pi-print' },
-  { id: 'form', label: '表单', icon: 'pi pi-file' },
-];
-
-const activeView = ref('grid');
 
 const toolbarActions = [
   { label: '添加记录', icon: 'pi pi-plus', action: createRecord },
