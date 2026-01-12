@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, JwtUser } from '../common/user.decorator';
-import { CreateFieldDto } from './dto';
+import { CreateFieldDto, UpdateFieldLayoutDto } from './dto';
 import { FieldsService } from './fields.service';
 
 @Controller('fields')
@@ -17,5 +17,10 @@ export class FieldsController {
   @Post()
   create(@CurrentUser() user: JwtUser, @Body() dto: CreateFieldDto) {
     return this.svc.create(user.sub, dto);
+  }
+
+  @Patch('layout')
+  updateLayout(@CurrentUser() user: JwtUser, @Body() dto: UpdateFieldLayoutDto) {
+    return this.svc.updateLayout(user.sub, dto);
   }
 }

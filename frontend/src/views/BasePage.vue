@@ -1,7 +1,7 @@
 <template>
-  <div>
-    <div class="overflow-hidden">
-      <div class="relative flex items-center gap-2 bg-slate-50/80 pr-2">
+  <div class="flex h-full min-h-0 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div class="relative flex items-center gap-2 bg-slate-50/80 pr-2 shrink-0">
         <button
           type="button"
           class="h-full w-10 absolute z-11 bg-gradient-to-right-f8f9fb self-center transition"
@@ -104,7 +104,7 @@
         </div>
       </div>
 
-      <div v-if="activeTable" class="p-4 bg-white">
+      <div v-if="activeTable" class="flex-1 min-h-0 overflow-hidden bg-white">
         <TablePage :table-id="activeTable.id" :key="activeTable.id" />
       </div>
     </div>
@@ -170,6 +170,11 @@ const router = useRouter();
 const work = useWorkStore();
 
 const baseId = computed(() => (route.params.baseId as string) || '');
+const tableIdFromQuery = computed(() => {
+  const queryValue = route.query.table;
+  if (Array.isArray(queryValue)) return queryValue[0] ?? '';
+  return typeof queryValue === 'string' ? queryValue : '';
+});
 const newTable = ref('');
 const activeTableId = ref('');
 const createPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
@@ -227,9 +232,12 @@ watch(
 );
 
 watch(
-  () => work.tables,
+  () => [work.tables, tableIdFromQuery.value],
   async () => {
-    if (!activeTableId.value || !work.tables.some((table) => table.id === activeTableId.value)) {
+    const queryId = tableIdFromQuery.value;
+    if (queryId && work.tables.some((table) => table.id === queryId)) {
+      activeTableId.value = queryId;
+    } else if (!activeTableId.value || !work.tables.some((table) => table.id === activeTableId.value)) {
       activeTableId.value = work.tables[0]?.id ?? '';
     }
     if (editingTableId.value && !work.tables.some((table) => table.id === editingTableId.value)) {
@@ -239,6 +247,22 @@ watch(
     updateScrollState();
   },
   { immediate: true }
+);
+
+watch(
+  () => activeTableId.value,
+  (tableId) => {
+    const queryId = tableIdFromQuery.value;
+    if (tableId && tableId !== queryId) {
+      router.replace({ query: { ...route.query, table: tableId } });
+      return;
+    }
+    if (!tableId && queryId && work.tables.length > 0) {
+      const nextQuery = { ...route.query } as Record<string, any>;
+      delete nextQuery.table;
+      router.replace({ query: nextQuery });
+    }
+  }
 );
 
 const tableMenuItems = computed(() => [

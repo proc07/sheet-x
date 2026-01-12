@@ -3,7 +3,6 @@ import { useAuthStore } from './stores/auth';
 import LoginPage from './views/LoginPage.vue';
 import HomePage from './views/HomePage.vue';
 import BasePage from './views/BasePage.vue';
-import TablePage from './views/TablePage.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -11,7 +10,6 @@ export const router = createRouter({
     { path: '/login', component: LoginPage },
     { path: '/', component: HomePage },
     { path: '/workspaces/:workspaceId/bases/:baseId?', component: BasePage },
-    { path: '/tables/:tableId', component: TablePage },
   ],
 });
 

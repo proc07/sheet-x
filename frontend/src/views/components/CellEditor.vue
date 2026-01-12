@@ -1,56 +1,59 @@
 <template>
-  <div>
-    <InputText
-      v-if="field.type === 'TEXT'"
-      v-model="local"
-      class="w-full"
-      @blur="commit"
-      placeholder=""
-    />
+  <InputText
+    v-if="field.type === 'TEXT'"
+    v-model="local"
+    size="small"
+    class="w-full"
+    @blur="commit"
+    placeholder=""
+  />
 
-    <InputText
-      v-else-if="field.type === 'NUMBER'"
-      v-model="local"
-      type="number"
-      class="w-full"
-      @blur="commitNumber"
-      placeholder=""
-    />
+  <InputText
+    v-else-if="field.type === 'NUMBER'"
+    v-model="local"
+    size="small"
+    type="number"
+    class="w-full"
+    @blur="commitNumber"
+    placeholder=""
+  />
 
-    <Calendar
-      v-else-if="field.type === 'DATE'"
-      v-model="local"
-      dateFormat="yy-mm-dd"
-      showIcon
-      class="w-full"
-      @change="commit"
-    />
+  <Calendar
+    v-else-if="field.type === 'DATE'"
+    v-model="local"
+    size="small"
+    dateFormat="yy-mm-dd"
+    showIcon
+    class="w-full"
+    @change="commit"
+  />
 
-    <Dropdown
-      v-else-if="field.type === 'SINGLE_SELECT'"
-      v-model="local"
-      :options="choices"
-      optionLabel="label"
-      optionValue="id"
-      class="w-full"
-      showClear
-      @change="commit"
-    />
+  <Dropdown
+    v-else-if="field.type === 'SINGLE_SELECT'"
+    v-model="local"
+    size="small"
+    :options="choices"
+    optionLabel="label"
+    optionValue="id"
+    class="w-full"
+    showClear
+    @change="commit"
+  />
 
-    <MultiSelect
-      v-else-if="field.type === 'MULTI_SELECT'"
-      v-model="local"
-      :options="choices"
-      optionLabel="label"
-      optionValue="id"
-      class="w-full"
-      display="chip"
-      showClear
-      @change="commit"
-    />
+  <MultiSelect
+    v-else-if="field.type === 'MULTI_SELECT'"
+    v-model="local"
+    size="small"
+    :options="choices"
+    optionLabel="label"
+    optionValue="id"
+    class="w-full"
+    display="chip"
+    showClear
+    @change="commit"
+  />
 
-    <span v-else class="text-slate-400">(未实现)</span>
-  </div>
+  <span v-else class="text-slate-400">(未实现)</span>
 </template>
 
 <script setup lang="ts">

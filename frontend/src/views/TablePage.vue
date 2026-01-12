@@ -1,64 +1,85 @@
 <template>
-  <div>
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <h2 class="m-0">Table ID:</h2>
-        <Tag :value="resolvedTableId" />
-      </div>
-      <div class="flex gap-2">
-      </div>
-    </div>
-
-    <div class="overflow-hidden mb-3">
-      <div class="flex flex-wrap items-center gap-2 border-b border-slate-200/80 py-2 text-sm">
+  <div class="flex h-full min-h-0 flex-col ">
+    <div class="overflow-hidden shrink-0">
+      <div class="flex flex-wrap items-center gap-2 py-2 text-sm">
         <button
           v-for="action in toolbarActions"
           :key="action.label"
           type="button"
-          class="flex items-center gap-2 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100"
+          class="flex items-center gap-2 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 cursor-pointer"
           @click="action.action?.()"
         >
           <i :class="action.icon"></i>
           <span>{{ action.label }}</span>
         </button>
       </div>
-
-      <div class="px-3 py-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <InputText v-model="newFieldName" placeholder="字段名" class="w-48" />
-          <Dropdown
-            v-model="newFieldType"
-            :options="fieldTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="字段类型"
-            class="w-48"
-          />
-          <Button label="添加字段" @click="createField" />
-        </div>
-
-        <div class="mt-3 flex flex-wrap">
-          <Tag
-            v-for="f in work.fields"
-            :key="f.id"
-            class="mr-2 mb-2"
-            :value="`${f.name} (${f.type})`"
-          />
-        </div>
-      </div>
     </div>
 
-    <div class=" p-2">
-      <DataTable :value="work.records" class="w-full" showGridlines>
-        <Column field="id" header="Record" :style="{ width: '220px' }" />
-
+    <div
+      ref="tableWrap"
+      class="flex min-h-10 flex-1 flex-col overflow-hidden"
+    >
+      <DataTable
+        class="w-full table-row-select"
+        scrollable
+        showGridlines
+        resizableColumns
+        dataKey="id"
+        columnResizeMode="expand"
+        :virtualScrollerOptions="virtualScrollerOptions"
+        :tableStyle="{ tableLayout: 'fixed' }"
+        :loading="loading"
+        size="small"
+        selectionMode="single"
+        contextMenu
+        v-model:contextMenuSelection="contextMenuRow"
+        :scrollHeight="tableHeight ? tableHeight : 'flex'"
+        editMode="cell"
+        @row-contextmenu="onRowContextMenu"
+        @column-resize-end="onColumnResizeEnd"
+        :value="work.records"        
+        :reorderableColumns="true"
+        @columnReorder="onColReorder"
+        @rowReorder="onRowReorder"
+      >
+        <template #empty>
+          <div class="flex items-center justify-center py-8 text-sm text-slate-400">
+            {{ loading ? '加载中...' : '暂无记录，点击上方“添加记录”按钮创建新记录' }}
+          </div>
+        </template>
+        <!-- <Column
+          rowReorder
+          headerClass="row-handle-cell"
+          bodyClass="row-handle-cell"
+          :headerStyle="{ width: '3rem', minWidth: '3rem', maxWidth: '3rem', textAlign: 'center' }"
+          :bodyStyle="{ width: '3rem', minWidth: '3rem', maxWidth: '3rem', textAlign: 'center' }"
+          :reorderableColumn="false"
+        /> -->
+        <Column
+          :reorderableColumn="false"
+          columnKey="row-select"
+          selectionMode="multiple"
+          frozen
+          headerClass="row-select-cell"
+          bodyClass="row-select-cell"
+          :headerStyle="{ width: '40px', padding: '10px' }"
+          :bodyStyle="{ width: '40px', textAlign: 'center' }"
+        ></Column>
         <Column
           v-for="field in work.fields"
           :key="field.id"
+          :columnKey="field.id"
           :header="field.name"
-          :style="{ minWidth: '180px' }"
+          :field="`${field.id}`"
+          :style="{ minWidth: '100px', width: `${getFieldWidth(field)}px`, height: `${rowHeight}px` }"
+          headerClass="field-cell"
+          bodyClass="field-cell"
+          :pt="{ headerCell: { 'data-field-id': field.id } }"
         >
           <template #body="{ data }">
+            {{ data.data?.[field.id] }}
+          </template>
+          <template #editor="{ data }">
             <CellEditor
               :field="field"
               :record="data"
@@ -66,24 +87,118 @@
             />
           </template>
         </Column>
-
-        <Column header="操作" :style="{ width: '140px' }">
-          <template #body="{ data }">
-            <Button size="small" severity="danger" label="删除" @click="remove(data.id)" />
+        <Column 
+          columnKey="field-add"
+          :style="{ width: hasHorizontalScroll ? '64px' : 'auto' }"
+          :reorderableColumn="false"
+        >
+          <template #header>
+            <Button
+              icon="pi pi-plus"
+              text
+              rounded
+              size="small"
+              aria-label="新增字段"
+              @click="toggleFieldCreatePopover"
+            />
           </template>
         </Column>
-      </DataTable>
-    </div>
 
-    <Message v-if="error" severity="error" :closable="false" class="mt-3  px-3 py-2">
-      {{ error }}
-    </Message>
+        <ColumnGroup type="footer">
+          <Row>
+            <Column
+              :colspan="2"
+              :footer="`${work.records.length}条记录`"
+              footer-style="text-align: right; font-size: 12px; color: #6b7280;"
+            />
+            <Column
+              v-for="(field, index) in work.fields"
+              :key="`footer-${field.id}`"
+              :footer=" work.fields.length - 1 === index ? '' : '选择计算'"
+              footer-style="text-align: right; font-size: 12px; color: #6b7280;"
+            />
+          </Row>
+        </ColumnGroup>
+      </DataTable>
+      <ContextMenu ref="rowMenu" :model="rowMenuItems" class="w-72">
+        <template #item="{ item, props }">
+          <div
+            v-if="item.type === 'insert'"
+            v-bind="props.action"
+            :class="['flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700', item.class, item.disabled ? 'opacity-50 pointer-events-none' : '']"
+          >
+            <i v-bind="props.icon" :class="item.icon"></i>
+            <span v-bind="props.label">{{ item.label }}</span>
+            <InputNumber
+              :min="1"
+              :max="100"
+              :disabled="(item.disabled as boolean)"
+              inputClass="w-12 h-5 text-center text-sm"
+              class="w-14"
+              size="small"
+              :modelValue="getInsertCount(item.direction)"
+              @input="(event) => onInsertInput(item.direction, event)"
+              @update:modelValue="(val) => setInsertCount(item.direction, val)"
+              @click.stop
+              @mousedown.stop
+              @keydown.stop
+            />
+            <span class="text-slate-500">行</span>
+          </div>
+          <div
+            v-else
+            v-bind="props.action"
+            :class="['flex items-center gap-3 px-3 py-2 text-sm text-slate-700', item.class, item.disabled ? 'opacity-50 pointer-events-none' : '']"
+          >
+            <i v-bind="props.icon" :class="item.icon" class="text-slate-500"></i>
+            <span v-bind="props.label">{{ item.label }}</span>
+          </div>
+        </template>
+      </ContextMenu>
+      <Popover ref="fieldCreatePopover">
+        <div class="w-80 space-y-4">
+          <div class="space-y-2">
+            <div class="text-sm text-slate-500">标题</div>
+            <InputText v-model="fieldCreateName" placeholder="请输入字段标题" class="w-full" />
+          </div>
+          <div class="space-y-2">
+            <div class="text-sm text-slate-500">字段类型</div>
+            <Dropdown
+              v-model="fieldCreateType"
+              :options="fieldTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="选择字段类型"
+              class="w-full"
+            />
+          </div>
+          <div class="space-y-2">
+            <div class="text-sm text-slate-500">默认值</div>
+            <InputText v-model="fieldCreateDefault" placeholder="请输入内容" class="w-full" />
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2">
+            <Button label="取消" text severity="secondary" @click="closeFieldCreatePopover" />
+            <Button label="确定" @click="submitFieldCreate" />
+          </div>
+        </div>
+      </Popover>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type {
+  DataTableRowContextMenuEvent,
+  DataTableRowReorderEvent,
+  DataTableColumnReorderEvent,
+  DataTableColumnResizeEndEvent,
+} from 'primevue/datatable';
+import type { InputNumberInputEvent } from 'primevue/inputnumber';
+import type { MenuItem } from 'primevue/menuitem';
 import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'primevue/usetoast';
+import { api } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from './components/CellEditor.vue';
 import { defaultOptionsForField } from '../utils/field';
@@ -93,13 +208,154 @@ const props = defineProps<{ tableId?: string }>();
 const route = useRoute();
 const router = useRouter();
 const work = useWorkStore();
+const toast = useToast();
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
 const newFieldName = ref('');
 const newFieldType = ref<Field['type']>('TEXT');
+const fieldCreatePopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const fieldCreateName = ref('');
+const fieldCreateType = ref<Field['type']>('TEXT');
+const fieldCreateDefault = ref('');
+const recordUpdateQueue = new Map<string, Promise<void>>();
+const rowHeight = ref(35);
+const virtualScrollerOptions = computed(() => ({
+  itemSize: rowHeight.value,
+  delay: 0,
+  numToleratedItems: 10,
+}));
+const hasHorizontalScroll = ref(false);
 
-const error = ref('');
+const DEFAULT_FIELD_WIDTH = 120;
+
+function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
+  const previous = recordUpdateQueue.get(recordId) ?? Promise.resolve();
+  const next = previous
+    .catch(() => undefined)
+    .then(task)
+    .finally(() => {
+      if (recordUpdateQueue.get(recordId) === next) {
+        recordUpdateQueue.delete(recordId);
+      }
+    });
+  recordUpdateQueue.set(recordId, next);
+  return next;
+}
+
+function updateHorizontalScroll() {
+  const container = tableWrap.value?.querySelector('.p-datatable-table-container')?.childNodes?.[0] as HTMLElement | null;
+  if (!container) return;
+  const next = container.scrollWidth > container.clientWidth;
+  if (next !== hasHorizontalScroll.value) {
+    hasHorizontalScroll.value = next;
+  }
+}
+
+function getFieldWidth(field: Field) {
+  const width = field.options?.width;
+  if (typeof width === 'number' && Number.isFinite(width)) {
+    return Math.max(100, Math.round(width));
+  }
+  return DEFAULT_FIELD_WIDTH;
+}
+
+function getFieldOrderFromDom() {
+  const container = tableWrap.value;
+  if (!container) return [];
+  // Read the actual header order after drag/reorder.
+  const headers = Array.from(container.querySelectorAll<HTMLElement>('th[data-field-id]'));
+  const ids: string[] = [];
+  for (const header of headers) {
+    const fieldId = header.dataset.fieldId;
+    if (fieldId && !ids.includes(fieldId)) {
+      ids.push(fieldId);
+    }
+  }
+  return ids;
+}
+
+function showUpdateErrorToast(detail: string, summary = '更新失败') {
+  toast.add({
+    severity: 'error',
+    summary,
+    detail,
+    life: 3000,
+  });
+}
+
+async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number }>) {
+  const tableId = resolvedTableId.value;
+  if (!tableId || updates.length === 0) return;
+  try {
+    // Persist layout to backend so refresh keeps the state.
+    await work.updateFieldLayout(tableId, updates);
+  } catch (error) {
+    console.error('Failed to update field layout', error);
+  }
+}
+
+// drag and drop
+const onColReorder = async (_event: DataTableColumnReorderEvent) => {
+  await nextTick();
+  const orderIds = getFieldOrderFromDom();
+  if (orderIds.length === 0) return;
+  // Sync store order with UI order, then persist positions.
+  const fieldMap = new Map(work.fields.map((field) => [field.id, field]));
+  const orderedFields = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
+  if (orderedFields.length !== work.fields.length) return;
+  orderedFields.forEach((field, index) => {
+    field.position = index;
+  });
+  work.fields = orderedFields;
+  await persistFieldLayout(
+    orderedFields.map((field, index) => ({ id: field.id, position: index }))
+  );
+  nextTick(updateHorizontalScroll);
+};
+
+const onColumnResizeEnd = async (event: DataTableColumnResizeEndEvent) => {
+  const header = event.element as HTMLElement | undefined;
+  const fieldId = header?.dataset?.fieldId;
+  if (!fieldId) return;
+  const field = work.fields.find((item) => item.id === fieldId);
+  if (!field) return;
+  // Use the actual header width so resize is saved as the user sees it.
+  const width = Math.max(100, Math.round(header.getBoundingClientRect().width));
+  const currentWidth = field.options?.width;
+  if (currentWidth === width) return;
+  field.options = { ...(field.options ?? {}), width };
+  await persistFieldLayout([{ id: fieldId, width }]);
+  nextTick(updateHorizontalScroll);
+};
+const onRowReorder = (event: DataTableRowReorderEvent) => {
+  console.log('row reorder', event);
+  work.records = event.value;
+};
+
+const loading = ref(false);
+const tableWrap = ref<HTMLDivElement | null>(null);
+const tableHeight = ref('');
+
+const updateTableHeight = () => {
+  const el = tableWrap.value;
+  if (!el) return;
+  const { top } = el.getBoundingClientRect();
+  const height = Math.max(0, window.innerHeight - top);
+  const nextHeight = `${Math.floor(height)}px`;
+  if (tableHeight.value !== nextHeight) {
+    tableHeight.value = nextHeight;
+  }
+  nextTick(updateHorizontalScroll);
+};
+onMounted(() => {
+  updateTableHeight();
+  window.addEventListener('resize', updateTableHeight);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateTableHeight);
+});
 
 const fieldTypeOptions = [
   { label: '文本', value: 'TEXT' },
@@ -108,6 +364,33 @@ const fieldTypeOptions = [
   { label: '单选', value: 'SINGLE_SELECT' },
   { label: '多选', value: 'MULTI_SELECT' },
 ];
+
+function toggleFieldCreatePopover(event: MouseEvent) {
+  fieldCreatePopover.value?.toggle(event);
+}
+function closeFieldCreatePopover() {
+  fieldCreatePopover.value?.hide?.();
+}
+
+function resetFieldCreateForm() {
+  fieldCreateName.value = '';
+  fieldCreateType.value = 'TEXT';
+  fieldCreateDefault.value = '';
+}
+
+async function submitFieldCreate() {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
+  const name = fieldCreateName.value.trim();
+  if (!name) return;
+  const type = fieldCreateType.value;
+  const defaultValue = fieldCreateDefault.value.trim();
+  const baseOptions = defaultOptionsForField(type);
+  const options = defaultValue ? { ...(baseOptions ?? {}), defaultValue } : baseOptions;
+  await work.createField(tableId, { name, type, options });
+  resetFieldCreateForm();
+  closeFieldCreatePopover();
+}
 
 const toolbarActions = [
   { label: '添加记录', icon: 'pi pi-plus', action: createRecord },
@@ -118,6 +401,98 @@ const toolbarActions = [
   { label: '排序', icon: 'pi pi-sort-amount-down' },
   { label: '行高', icon: 'pi pi-bars' },
 ];
+
+const rowMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
+const contextMenuRow = ref<RecordRow | null>(null);
+const insertAboveCount = ref(1);
+const insertBelowCount = ref(1);
+const rowMenuItems = computed<MenuItem[]>(() => {
+  const disabled = !contextMenuRow.value;
+  return [
+    { label: '向上插入', icon: 'pi pi-arrow-up', type: 'insert', direction: 'above', command: () => insertRows('above'), disabled },
+    { label: '向下插入', icon: 'pi pi-arrow-down', type: 'insert', direction: 'below', command: () => insertRows('below'), disabled },
+    { separator: true },
+    { label: '查看详情', icon: 'pi pi-info-circle', command: () => handleMenuAction('查看详情'), disabled },
+    { label: '添加子记录', icon: 'pi pi-sitemap', command: () => handleMenuAction('添加子记录'), disabled },
+    { label: '查看记录历史', icon: 'pi pi-history', command: () => handleMenuAction('查看记录历史'), disabled },
+    { label: '添加评论', icon: 'pi pi-comment', command: () => handleMenuAction('添加评论'), disabled },
+    { separator: true },
+    { label: '删除记录', icon: 'pi pi-trash', class: 'text-red-500', command: () => deleteContextRow(), disabled },
+  ];
+});
+
+function onRowContextMenu(event: DataTableRowContextMenuEvent) {
+  event.originalEvent.preventDefault();
+  insertAboveCount.value = 1;
+  insertBelowCount.value = 1;
+  contextMenuRow.value = event.data ?? null;
+  rowMenu.value?.show(event.originalEvent);
+}
+
+function normalizeInsertCount(value: unknown) {
+  const count = Math.floor(Number(value));
+  if (!Number.isFinite(count) || count < 1) return 1;
+  return Math.min(count, 100);
+}
+function getInsertCount(direction: 'above' | 'below') {
+  return direction === 'above' ? insertAboveCount.value : insertBelowCount.value;
+}
+function setInsertCount(direction: 'above' | 'below', value: unknown) {
+  const next = normalizeInsertCount(value);
+  if (direction === 'above') {
+    insertAboveCount.value = next;
+  } else {
+    insertBelowCount.value = next;
+  }
+  return next;
+}
+function onInsertInput(direction: 'above' | 'below', event: InputNumberInputEvent) {
+  const newValue = setInsertCount(direction, event?.value);
+  // Sync the input value to avoid PrimeVue InputNumber internal state desync
+  const target = event?.originalEvent?.target;
+  if (target instanceof HTMLInputElement) {
+    const nextValue = String(newValue);
+    if (target.value !== nextValue) {
+      target.value = nextValue;
+    }
+  }
+}
+
+async function insertRows(direction: 'above' | 'below') {
+  const tableId = resolvedTableId.value;
+  const anchor = contextMenuRow.value;
+  if (!tableId || !anchor) return;
+  const count = normalizeInsertCount(getInsertCount(direction));
+  if (count < 1) return;
+  const anchorIndex = work.records.findIndex((record) => record.id === anchor.id);
+  if (anchorIndex < 0) return;
+  const insertIndex = direction === 'above' ? anchorIndex : anchorIndex + 1;
+
+  try {
+    const created: RecordRow[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const { data } = await api.post('/records', { tableId, data: {} });
+      created.push(data as RecordRow);
+    }
+    work.records.splice(insertIndex, 0, ...created);
+    rowMenu.value?.hide?.();
+  } catch (e: any) {
+    showUpdateErrorToast(e?.response?.data?.message ?? '插入记录失败');
+  }
+}
+
+function handleMenuAction(label: string) {
+  if (!contextMenuRow.value) return;
+  console.info(`[Table] ${label}`, contextMenuRow.value);
+}
+
+async function deleteContextRow() {
+  const target = contextMenuRow.value;
+  if (!target) return;
+  await remove(target.id);
+  contextMenuRow.value = null;
+  rowMenu.value?.hide?.();
+}
 
 watch(
   () => resolvedTableId.value,
@@ -131,12 +506,15 @@ watch(
 async function reload() {
   const tableId = resolvedTableId.value;
   if (!tableId) return;
-  error.value = '';
+  loading.value = true;
   try {
     await work.loadFields(tableId);
     await work.loadRecords(tableId);
+    nextTick(updateHorizontalScroll);
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? '加载失败';
+    showUpdateErrorToast(e?.response?.data?.message ?? '加载失败');
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -155,18 +533,87 @@ async function createRecord() {
   await work.createRecord(tableId);
 }
 
-async function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; value: any }) {
-  error.value = '';
-  try {
-    await work.patchRecord(payload.recordId, payload.revision, { [payload.fieldId]: payload.value });
-  } catch (e: any) {
-    const msg = e?.response?.data?.message ?? '更新失败';
-    // 409 revision conflict
-    error.value = typeof msg === 'string' ? msg : '更新失败（可能有冲突，请刷新）';
+function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; value: any }) {
+  const { recordId, fieldId, value } = payload;
+  const record = work.records.find((item) => item.id === recordId);
+  if (!record) return;
+  if (typeof value === 'string' && value.trim().length === 0) {
+    return;
   }
+  if (!record.data) {
+    record.data = {};
+  }
+  if (Object.is(record.data[fieldId], value)) {
+    return;
+  }
+  record.data[fieldId] = value;
+
+  queueRecordUpdate(recordId, async () => {
+    const current = work.records.find((item) => item.id === recordId);
+    if (!current) return;
+    try {
+      await work.patchRecord(recordId, current.revision, { [fieldId]: value });
+    } catch (e: any) {
+      if (e?.response?.status === 409) {
+        showUpdateErrorToast('数据已更新，请刷新后重试', '更新冲突');
+        await reload();
+        return;
+      }
+      showUpdateErrorToast(e?.response?.data?.message ?? '更新失败');
+    }
+  });
 }
 
 async function remove(recordId: string) {
   await work.deleteRecord(recordId);
 }
 </script>
+
+<style scoped>
+:deep(.table-row-select .p-datatable-tbody) {
+  counter-reset: row;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr) {
+  counter-increment: row;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {
+  position: relative;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell::before) {
+  content: counter(row);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 12px;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr:hover > td.row-select-cell::before),
+:deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell::before) {
+  opacity: 0;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell .p-checkbox) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr:hover > td.row-select-cell .p-checkbox),
+:deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell .p-checkbox) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+:deep(.table-row-select .p-datatable-thead > tr > th.field-cell),
+:deep(.table-row-select .p-datatable-tbody > tr > td.field-cell),
+:deep(.table-row-select .p-datatable-tfoot > tr > td.field-cell) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

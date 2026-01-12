@@ -120,6 +120,19 @@ export const useWorkStore = defineStore('work', {
       await this.loadFields(tableId);
       return data as Field;
     },
+    async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number }>) {
+      if (!tableId || fields.length === 0) return [];
+      const { data } = await api.patch('/fields/layout', { tableId, fields });
+      if (Array.isArray(data)) {
+        data.forEach((updated) => {
+          const idx = this.fields.findIndex((field) => field.id === updated.id);
+          if (idx >= 0) {
+            this.fields[idx] = { ...this.fields[idx], ...updated };
+          }
+        });
+      }
+      return data as Field[];
+    },
     async loadRecords(tableId: string) {
       const { data } = await api.get('/records', { params: { tableId } });
       this.records = data;

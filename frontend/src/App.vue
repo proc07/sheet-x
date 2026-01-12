@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen">
+    <Toast position="top-right" />
     <div v-if="showShell" class="flex min-h-screen">
       <aside
         class="hidden flex-col border-r border-slate-200/70 bg-white/70 py-4 backdrop-blur lg:flex dark:border-slate-800/70 dark:bg-slate-900/70"
@@ -170,8 +171,8 @@
           </div>
         </header>
 
-        <main class="flex-1 min-w-0 overflow-auto">
-          <div class="fade-in">
+        <main class="flex-1 min-w-0 min-h-0 overflow-auto">
+          <div class="fade-in h-full min-h-0">
             <router-view />
           </div>
         </main>

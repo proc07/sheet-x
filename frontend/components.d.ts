@@ -11,9 +11,12 @@ declare module 'vue' {
     Calendar: typeof import('primevue/calendar')['default']
     Card: typeof import('primevue/card')['default']
     Column: typeof import('primevue/column')['default']
+    ColumnGroup: typeof import('primevue/columngroup')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
+    ContextMenu: typeof import('primevue/contextmenu')['default']
     DataTable: typeof import('primevue/datatable')['default']
     Dropdown: typeof import('primevue/dropdown')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     Listbox: typeof import('primevue/listbox')['default']
     Menu: typeof import('primevue/menu')['default']
@@ -22,6 +25,7 @@ declare module 'vue' {
     Popover: typeof import('primevue/popover')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Row: typeof import('primevue/row')['default']
     Select: typeof import('primevue/select')['default']
     SidebarNav: typeof import('./src/components/SidebarNav.vue')['default']
     Tab: typeof import('primevue/tab')['default']
@@ -30,6 +34,7 @@ declare module 'vue' {
     TabPanels: typeof import('primevue/tabpanels')['default']
     Tabs: typeof import('primevue/tabs')['default']
     Tag: typeof import('primevue/tag')['default']
+    Toast: typeof import('primevue/toast')['default']
   }
   export interface ComponentCustomProperties {
     Tooltip: typeof import('primevue/tooltip')['default']

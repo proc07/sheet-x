@@ -8,6 +8,7 @@ import App from './App.vue';
 import { router } from './router';
 import DialogService from 'primevue/dialogservice';
 import ConfirmationService from 'primevue/confirmationservice';
+import ToastService from 'primevue/toastservice';
 
 const app = createApp(App);
 
@@ -24,6 +25,7 @@ app
     },
   })
   .use(DialogService)
-  .use(ConfirmationService);
+  .use(ConfirmationService)
+  .use(ToastService);
 
 app.mount('#app');

@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateFieldDto } from './dto';
+import { CreateFieldDto, UpdateFieldLayoutDto } from './dto';
 
 @Injectable()
 export class FieldsService {
@@ -58,5 +59,64 @@ export class FieldsService {
       },
       select: { id: true, name: true, type: true, required: true, options: true, position: true },
     });
+  }
+
+  async updateLayout(userId: string, dto: UpdateFieldLayoutDto) {
+    if (!dto.tableId) {
+      throw new BadRequestException('tableId is required');
+    }
+    if (!Array.isArray(dto.fields) || dto.fields.length === 0) {
+      throw new BadRequestException('fields is required');
+    }
+    // Ensure the caller can mutate fields for this table.
+    await this.assertTableWrite(userId, dto.tableId);
+
+    const fieldIds = dto.fields.map((field) => field.id).filter(Boolean);
+    if (fieldIds.length === 0) {
+      throw new BadRequestException('fields is required');
+    }
+
+    // Load current options so width updates can merge without clobbering.
+    const storedFields = await this.prisma.field.findMany({
+      where: { tableId: dto.tableId, id: { in: fieldIds } },
+      select: { id: true, options: true },
+    });
+    if (storedFields.length !== fieldIds.length) {
+      throw new ForbiddenException('Field not found');
+    }
+
+    const optionsMap = new Map(
+      storedFields.map((field) => [field.id, (field.options ?? {}) as Record<string, any>])
+    );
+
+    const updates: Prisma.PrismaPromise<any>[] = [];
+    for (const field of dto.fields) {
+      const data: { position?: number; options?: Record<string, any> } = {};
+      // Normalize inputs; only persist valid numeric updates.
+      if (typeof field.position === 'number' && Number.isFinite(field.position)) {
+        data.position = Math.max(0, Math.trunc(field.position));
+      }
+      if (typeof field.width === 'number' && Number.isFinite(field.width)) {
+        const baseOptions = optionsMap.get(field.id) ?? {};
+        data.options = { ...baseOptions, width: Math.max(40, Math.trunc(field.width)) };
+      }
+      if (Object.keys(data).length === 0) {
+        continue;
+      }
+      updates.push(
+        this.prisma.field.update({
+          where: { id: field.id },
+          data,
+          select: { id: true, name: true, type: true, required: true, options: true, position: true },
+        })
+      );
+    }
+
+    if (updates.length === 0) {
+      return [];
+    }
+
+    // Apply all layout changes together to keep the order consistent.
+    return this.prisma.$transaction(updates);
   }
 }
