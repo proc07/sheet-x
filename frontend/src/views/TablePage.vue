@@ -39,7 +39,7 @@
             <span>字段配置</span>
             <i class="pi pi-question-circle text-slate-400"></i>
           </div>
-          <ScrollPanel class="field-config-scroll" :style="{ maxHeight: `${fieldConfigListMaxHeight}px` }">
+          <div class="field-config-scroll" :style="{ maxHeight: `${fieldConfigListMaxHeight}px` }">
             <div class="py-1">
               <div
                 v-for="field in work.fields"
@@ -67,7 +67,7 @@
                 </div>
               </div>
             </div>
-          </ScrollPanel>
+          </div>
           <div ref="fieldConfigFooter" class="border-t border-slate-200/80 px-3 py-2">
             <button type="button" class="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
               <i class="pi pi-plus"></i>
@@ -186,14 +186,38 @@
               footer-style="text-align: right; font-size: 12px; color: #6b7280;"
             />
             <Column
-              v-for="(field, index) in visibleFields"
+              v-for="field in visibleFields"
               :key="`footer-${field.id}`"
-              :footer=" visibleFields.length - 1 === index ? '' : '选择计算'"
-              footer-style="text-align: right; font-size: 12px; color: #6b7280;"
-            />
-          </Row>
-        </ColumnGroup>
-      </DataTable>
+              footer-style="text-align: right; font-size: 12px; color: #6b7280; cursor: pointer;"
+            >
+              <template #footer>
+                 <div @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
+                   <span>{{ getStatLabel(field.id) }}</span>
+                   <i 
+                    class="pi text-[12px] text-slate-400 group-hover:text-slate-600"
+                    :class="currentStatFieldId === field.id && statPopoverVisible ? 'pi-sort-up-fill' : 'pi-sort-down-fill'"
+                   ></i>
+                 </div>
+               </template>
+             </Column>
+           </Row>
+         </ColumnGroup>
+       </DataTable>
+ 
+       <Popover ref="statPopover" @show="statPopoverVisible = true" @hide="statPopoverVisible = false">
+         <div class="w-32 py-1">
+          <button
+            v-for="opt in statOptions"
+            :key="opt.value"
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+            @click="selectStat(opt.value)"
+          >
+            <span>{{ opt.label }}</span>
+            <i v-if="fieldStats[currentStatFieldId!]?.type === opt.value" class="pi pi-check ml-auto text-blue-600 text-xs"></i>
+          </button>
+        </div>
+      </Popover>
 
       <ContextMenu ref="rowMenu" :model="rowMenuItems" class="w-72">
         <template #item="{ item, props }">
@@ -278,7 +302,7 @@ import type { InputNumberInputEvent } from 'primevue/inputnumber';
 import type { MenuItem } from 'primevue/menuitem';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
-import { api } from '../api';
+import { api, getTableStats, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from './components/CellEditor.vue';
 import { defaultOptionsForField } from '../utils/field';
@@ -350,6 +374,106 @@ const rowHeightOptions = [
   { value: 4, label: '高', iconClass: 'pi-bars' },
   { value: 6, label: '超高', iconClass: 'pi-align-justify' },
 ] as const;
+
+// Stats related
+const fieldStats = ref<Record<string, { type: string; value: string | number; loading: boolean }>>({});
+const statPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const currentStatFieldId = ref<string | null>(null);
+const statPopoverVisible = ref(false);
+
+const statOptions = [
+  { label: '不展示', value: 'none' },
+  { label: '记录总数', value: 'countAll' },
+  { label: '未填写', value: 'empty' },
+  { label: '已填写', value: 'filled' },
+  { label: '未填写占比', value: 'percentEmpty' },
+  { label: '已填写占比', value: 'percentFilled' },
+];
+
+function getStatLabel(fieldId: string) {
+  const stat = fieldStats.value[fieldId];
+  if (!stat || stat.type === 'none') return '选择计算';
+  if (stat.loading) return '计算中...';
+
+  const val = stat.value;
+  switch (stat.type) {
+    case 'countAll': return `${val}条记录`;
+    case 'empty': return `未填写 ${val}`;
+    case 'filled': return `已填写 ${val}`;
+    case 'percentEmpty': return `未填写占比 ${Number(val).toFixed(1)}%`;
+    case 'percentFilled': return `已填写占比 ${Number(val).toFixed(1)}%`;
+    default: return '选择计算';
+  }
+}
+
+function openStatPopover(event: Event, fieldId: string) {
+  currentStatFieldId.value = fieldId;
+  statPopover.value?.toggle(event);
+}
+
+async function selectStat(type: string) {
+  const fieldId = currentStatFieldId.value;
+  if (!fieldId) return;
+  
+  statPopover.value?.hide();
+
+  if (type === 'none') {
+    fieldStats.value[fieldId] = { type, value: 0, loading: false };
+    // Persist changes
+    await work.updateFieldLayout(resolvedTableId.value, [{ id: fieldId, statType: 'none' }]);
+    return;
+  }
+
+  fieldStats.value[fieldId] = { 
+    type, 
+    value: fieldStats.value[fieldId]?.value ?? 0, 
+    loading: true 
+  };
+
+  // Persist changes
+  work.updateFieldLayout(resolvedTableId.value, [{ id: fieldId, statType: type }]);
+
+  try {
+    const res = await getBatchTableStats(resolvedTableId.value, [{ fieldId, type }]);
+    if (res.length > 0) {
+      fieldStats.value[fieldId] = { type: res[0].type, value: res[0].value, loading: false };
+    }
+  } catch (e) {
+    console.error(e);
+    toast.add({ severity: 'error', summary: '获取统计失败', detail: '请重试', life: 3000 });
+    fieldStats.value[fieldId] = { type: 'none', value: 0, loading: false };
+  }
+}
+
+// Initialize stats from field options
+watch(() => work.fields, async (fields) => {
+  const requests: { fieldId: string; type: string }[] = [];
+  
+  fields.forEach((field) => {
+    const statType = field.options?.statType;
+    // Skip if already loaded or no stat type
+    if (!statType || statType === 'none' || fieldStats.value[field.id]) return;
+
+    fieldStats.value[field.id] = { type: statType, value: 0, loading: true };
+    requests.push({ fieldId: field.id, type: statType });
+  });
+
+  if (requests.length === 0) return;
+
+  try {
+    const res = await getBatchTableStats(resolvedTableId.value, requests);
+    res.forEach((stat) => {
+      fieldStats.value[stat.fieldId] = { type: stat.type, value: stat.value, loading: false };
+    });
+  } catch (e) {
+    console.error(e);
+    // On batch error, reset all requested fields to none/error state
+    requests.forEach((req) => {
+      fieldStats.value[req.fieldId] = { type: 'none', value: 0, loading: false };
+    });
+  }
+}, { immediate: true, deep: true });
+
 const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions[0].value);
 const virtualScrollerOptions = computed(() => ({
   itemSize: 10 + rowHeight.value * HEIGHT_PER_ROW,
@@ -841,13 +965,22 @@ async function remove(recordId: string) {
   color: #64748b;
 }
 
-:deep(.field-config-scroll .p-scrollpanel-bar-x) {
-  display: none;
+.field-config-scroll {
+  overflow-y: auto;
 }
 
-:deep(.field-config-scroll .p-scrollpanel-bar-y) {
+.field-config-scroll::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
+}
+
+.field-config-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
   border-radius: 9999px;
+}
+
+.field-config-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {

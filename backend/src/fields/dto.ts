@@ -42,6 +42,10 @@ export class UpdateFieldLayoutItemDto {
   @IsOptional()
   @IsBoolean()
   hidden?: boolean;
+
+  @IsOptional()
+  @IsString()
+  statType?: string;
 }
 
 export class UpdateFieldLayoutDto {

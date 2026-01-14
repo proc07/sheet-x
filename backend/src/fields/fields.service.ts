@@ -106,6 +106,9 @@ export class FieldsService {
       if (typeof field.hidden === 'boolean') {
         nextOptions = { ...(nextOptions ?? baseOptions), hidden: field.hidden };
       }
+      if (typeof field.statType === 'string') {
+        nextOptions = { ...(nextOptions ?? baseOptions), statType: field.statType };
+      }
       if (nextOptions) {
         data.options = nextOptions;
       }

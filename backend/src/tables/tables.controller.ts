@@ -33,4 +33,23 @@ export class TablesController {
   remove(@CurrentUser() user: JwtUser, @Param('tableId') tableId: string) {
     return this.svc.remove(user.sub, tableId);
   }
+
+  @Get(':tableId/stats')
+  getStats(
+    @CurrentUser() user: JwtUser,
+    @Param('tableId') tableId: string,
+    @Query('fieldId') fieldId: string,
+    @Query('type') type: string,
+  ) {
+    return this.svc.getStats(user.sub, tableId, fieldId, type);
+  }
+
+  @Post(':tableId/stats')
+  getBatchStats(
+    @CurrentUser() user: JwtUser,
+    @Param('tableId') tableId: string,
+    @Body('stats') stats: { fieldId: string; type: string }[],
+  ) {
+    return this.svc.getBatchStats(user.sub, tableId, stats);
+  }
 }
