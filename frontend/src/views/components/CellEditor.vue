@@ -112,6 +112,9 @@ function commitNumber() {
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
   resize: none;
+  font-size: 14px;
+  padding: 0;
+  border-radius: 0;
 }
 
 .cell-textarea::-webkit-scrollbar {

@@ -38,6 +38,7 @@
       class="flex min-h-10 flex-1 flex-col overflow-hidden"
     >
       <DataTable
+        ref="dataTable"
         class="w-full table-row-select"
         scrollable
         showGridlines
@@ -48,11 +49,17 @@
         :tableStyle="{ tableLayout: 'fixed' }"
         :loading="loading"
         size="small"
-        selectionMode="single"
+        v-model:selection="selectedRows"
+        :rowClass="getRowClass"
+        :rowStyle="getRowStyle"
         contextMenu
         v-model:contextMenuSelection="contextMenuRow"
         :scrollHeight="tableHeight ? tableHeight : 'flex'"
         editMode="cell"
+        @cell-edit-init="onCellEditInit"
+        @cell-edit-complete="onCellEditComplete"
+        @cell-edit-cancel="onCellEditCancel"
+        @select-all-change="onSelectAllChange"
         @row-contextmenu="onRowContextMenu"
         @column-resize-end="onColumnResizeEnd"
         :value="work.records"        
@@ -100,11 +107,13 @@
             </div>
           </template>
           <template #editor="{ data }">
-            <CellEditor
-              :field="field"
-              :record="data"
-              @update="onUpdateCell"
-            />
+            <div class="w-full whitespace-normal overflow-hidden text-ellipsis" :class="`line-clamp-${rowHeight}`" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
+              <CellEditor
+                :field="field"
+                :record="data"
+                @update="onUpdateCell"
+              />
+            </div>
           </template>
         </Column>
         <Column 
@@ -146,7 +155,7 @@
           <div
             v-if="item.type === 'insert'"
             v-bind="props.action"
-            :class="['flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700', item.class, item.disabled ? 'opacity-50 pointer-events-none' : '']"
+            :class="['flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700', item.class, item.disabled ? 'opacity-50 pointer-events-none' : '']"
           >
             <i v-bind="props.icon" :class="item.icon"></i>
             <span v-bind="props.label">{{ item.label }}</span>
@@ -215,6 +224,10 @@ import type {
   DataTableRowReorderEvent,
   DataTableColumnReorderEvent,
   DataTableColumnResizeEndEvent,
+  DataTableCellEditInitEvent,
+  DataTableCellEditCancelEvent,
+  DataTableCellEditCompleteEvent,
+  DataTableSelectAllChangeEvent,
 } from 'primevue/datatable';
 import type { InputNumberInputEvent } from 'primevue/inputnumber';
 import type { MenuItem } from 'primevue/menuitem';
@@ -241,6 +254,18 @@ const fieldCreateName = ref('');
 const fieldCreateType = ref<Field['type']>('TEXT');
 const fieldCreateDefault = ref('');
 const recordUpdateQueue = new Map<string, Promise<void>>();
+const editingRowId = ref<string | null>(null);
+const selectedRows = ref<RecordRow[]>([]);
+
+const recordIndexMap = computed(() => {
+  const map = new Map<string, number>();
+  work.records.forEach((record, index) => {
+    map.set(record.id, index);
+  });
+  return map;
+});
+
+const selectedRowIds = computed(() => new Set(selectedRows.value.map((row) => row.id)));
 
 const DEFAULT_FIELD_WIDTH = 120;
 
@@ -289,6 +314,40 @@ function updateHorizontalScroll() {
 function toggleRowHeightPopover(event: MouseEvent) {
   rowHeightPopover.value?.toggle(event);
 }
+
+function getRowClass(data: RecordRow) {
+  return {
+    'row-editing': editingRowId.value === data.id,
+    'row-selected': selectedRowIds.value.has(data.id),
+  };
+}
+
+function getRowStyle(data: RecordRow) {
+  const index = recordIndexMap.value.get(data.id);
+  const label = index !== undefined ? String(index + 1) : '';
+  return { '--row-index': `"${label}"` };
+}
+
+function onCellEditInit(event: DataTableCellEditInitEvent<RecordRow>) {
+  editingRowId.value = event.data?.id ?? null;
+}
+
+function onCellEditComplete(event: DataTableCellEditCompleteEvent<RecordRow>) {
+  if (editingRowId.value === event.data?.id) {
+    editingRowId.value = null;
+  }
+}
+
+function onCellEditCancel(event: DataTableCellEditCancelEvent) {
+  if (editingRowId.value === event.data?.id) {
+    editingRowId.value = null;
+  }
+}
+
+function onSelectAllChange(event: DataTableSelectAllChangeEvent) {
+  selectedRows.value = event.checked ? [...work.records] : [];
+}
+
 function selectRowHeight(value: typeof rowHeightOptions[number]['value']) {
   const previous = rowHeight.value;
   rowHeight.value = value;
@@ -628,12 +687,13 @@ async function remove(recordId: string) {
 </script>
 
 <style scoped>
-:deep(.table-row-select .p-datatable-tbody) {
-  counter-reset: row;
+:deep(.table-row-select .p-datatable-tbody > tr.row-editing > td),
+:deep(.table-row-select .p-datatable-tbody > tr.row-selected > td),
+:deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td) {
+  background-color: #cbd5e1!important;
 }
-
-:deep(.table-row-select .p-datatable-tbody > tr) {
-  counter-increment: row;
+:deep(.table-row-select .p-datatable-tbody > tr:hover > td) {
+  background-color: #f1f5f9;
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {
@@ -641,7 +701,7 @@ async function remove(recordId: string) {
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell::before) {
-  content: counter(row);
+  content: var(--row-index, counter(row));
   position: absolute;
   inset: 0;
   display: flex;
@@ -652,6 +712,7 @@ async function remove(recordId: string) {
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr:hover > td.row-select-cell::before),
+:deep(.table-row-select .p-datatable-tbody > tr.row-selected > td.row-select-cell::before),
 :deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell::before) {
   opacity: 0;
 }
@@ -662,6 +723,7 @@ async function remove(recordId: string) {
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr:hover > td.row-select-cell .p-checkbox),
+:deep(.table-row-select .p-datatable-tbody > tr.row-selected > td.row-select-cell .p-checkbox),
 :deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell .p-checkbox) {
   opacity: 1;
   pointer-events: auto;
