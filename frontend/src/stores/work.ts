@@ -17,7 +17,7 @@ function persistWorkspaceId(id: string) {
 
 export type Workspace = { id: string; name: string; createdAt: string };
 export type Base = { id: string; name: string; createdAt: string };
-export type Table = { id: string; name: string; createdAt: string };
+export type Table = { id: string; name: string; createdAt: string; rowHeight?: number };
 export type Field = {
   id: string;
   name: string;
@@ -100,10 +100,23 @@ export const useWorkStore = defineStore('work', {
       return data as Table;
     },
     async renameTable(tableId: string, name: string) {
-      const { data } = await api.patch(`/tables/${tableId}`, { name });
+      return this.updateTable(tableId, { name });
+    },
+    async updateTable(tableId: string, payload: { name?: string; rowHeight?: number }) {
+      const { data } = await api.patch(`/tables/${tableId}`, payload);
       const idx = this.tables.findIndex(table => table.id === tableId);
       if (idx >= 0) {
         this.tables[idx] = { ...this.tables[idx], ...data };
+      }
+      return data as Table;
+    },
+    async loadTable(tableId: string) {
+      const { data } = await api.get(`/tables/${tableId}`);
+      const idx = this.tables.findIndex(table => table.id === tableId);
+      if (idx >= 0) {
+        this.tables[idx] = { ...this.tables[idx], ...data };
+      } else {
+        this.tables.push(data);
       }
       return data as Table;
     },

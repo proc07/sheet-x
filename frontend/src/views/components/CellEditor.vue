@@ -1,9 +1,9 @@
 <template>
-  <InputText
+  <Textarea
     v-if="field.type === 'TEXT'"
     v-model="local"
     size="small"
-    class="w-full"
+    class="w-full h-full cell-textarea"
     @blur="commit"
     placeholder=""
   />
@@ -104,3 +104,27 @@ function commitNumber() {
   emit('update', { recordId: props.record.id, revision: props.record.revision, fieldId: fieldId.value, value: Number.isFinite(num as any) ? num : null });
 }
 </script>
+
+<style scoped>
+.cell-textarea {
+  display: block;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+  resize: none;
+}
+
+.cell-textarea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cell-textarea::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.6);
+  border-radius: 9999px;
+}
+
+.cell-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+</style>

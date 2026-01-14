@@ -7,12 +7,30 @@
           :key="action.label"
           type="button"
           class="flex items-center gap-2 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 cursor-pointer"
-          @click="action.action?.()"
+          @click="action.action?.($event)"
         >
           <i :class="action.icon"></i>
           <span>{{ action.label }}</span>
         </button>
       </div>
+      <Popover ref="rowHeightPopover">
+        <div class="w-35">
+          <div class="px-2 pt-2 text-sm text-slate-400">设置行高</div>
+          <div class="pt-1">
+            <button
+              v-for="option in rowHeightOptions"
+              :key="option.value"
+              type="button"
+              class="flex w-full items-center gap-2 px-2 py-2 text-sm transition hover:bg-slate-100"
+              :class="rowHeight === option.value ? 'text-blue-600' : 'text-slate-600'"
+              @click="selectRowHeight(option.value)"
+            >
+              <i class="pi" :class="option.iconClass"></i>
+              <span>{{ option.label }}</span>
+            </button>
+          </div>
+        </div>
+      </Popover>
     </div>
 
     <div
@@ -71,13 +89,15 @@
           :columnKey="field.id"
           :header="field.name"
           :field="`${field.id}`"
-          :style="{ minWidth: '100px', width: `${getFieldWidth(field)}px`, height: `${rowHeight}px` }"
+          :style="{ minWidth: '100px', width: `${getFieldWidth(field)}px`}"
           headerClass="field-cell"
           bodyClass="field-cell"
           :pt="{ headerCell: { 'data-field-id': field.id } }"
         >
           <template #body="{ data }">
-            {{ data.data?.[field.id] }}
+            <div class="w-full whitespace-normal overflow-hidden text-ellipsis" :class="`line-clamp-${rowHeight}`" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
+              {{ data.data?.[field.id] }}
+            </div>
           </template>
           <template #editor="{ data }">
             <CellEditor
@@ -89,7 +109,7 @@
         </Column>
         <Column 
           columnKey="field-add"
-          :style="{ width: hasHorizontalScroll ? '64px' : 'auto' }"
+          :style="hasHorizontalScroll ? '64px' : 'auto'"
           :reorderableColumn="false"
         >
           <template #header>
@@ -120,6 +140,7 @@
           </Row>
         </ColumnGroup>
       </DataTable>
+
       <ContextMenu ref="rowMenu" :model="rowMenuItems" class="w-72">
         <template #item="{ item, props }">
           <div
@@ -155,6 +176,7 @@
           </div>
         </template>
       </ContextMenu>
+
       <Popover ref="fieldCreatePopover">
         <div class="w-80 space-y-4">
           <div class="space-y-2">
@@ -219,13 +241,6 @@ const fieldCreateName = ref('');
 const fieldCreateType = ref<Field['type']>('TEXT');
 const fieldCreateDefault = ref('');
 const recordUpdateQueue = new Map<string, Promise<void>>();
-const rowHeight = ref(35);
-const virtualScrollerOptions = computed(() => ({
-  itemSize: rowHeight.value,
-  delay: 0,
-  numToleratedItems: 10,
-}));
-const hasHorizontalScroll = ref(false);
 
 const DEFAULT_FIELD_WIDTH = 120;
 
@@ -243,6 +258,26 @@ function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
   return next;
 }
 
+const HEIGHT_PER_ROW = 21;
+const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const rowHeightOptions = [
+  { value: 1, label: '低', iconClass: 'pi-minus' },
+  { value: 2, label: '中等', iconClass: 'pi-equals' },
+  { value: 4, label: '高', iconClass: 'pi-bars' },
+  { value: 6, label: '超高', iconClass: 'pi-align-justify' },
+] as const;
+const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions[0].value);
+const virtualScrollerOptions = computed(() => ({
+  itemSize: 10 + rowHeight.value * HEIGHT_PER_ROW,
+  delay: 0,
+  numToleratedItems: 10,
+}));
+const hasHorizontalScroll = ref(false);
+
+function normalizeRowHeight(value?: number) {
+  return value === 1 || value === 2 || value === 4 || value === 6 ? value : 1;
+}
+
 function updateHorizontalScroll() {
   const container = tableWrap.value?.querySelector('.p-datatable-table-container')?.childNodes?.[0] as HTMLElement | null;
   if (!container) return;
@@ -250,6 +285,25 @@ function updateHorizontalScroll() {
   if (next !== hasHorizontalScroll.value) {
     hasHorizontalScroll.value = next;
   }
+}
+function toggleRowHeightPopover(event: MouseEvent) {
+  rowHeightPopover.value?.toggle(event);
+}
+function selectRowHeight(value: typeof rowHeightOptions[number]['value']) {
+  const previous = rowHeight.value;
+  rowHeight.value = value;
+  rowHeightPopover.value?.hide?.();
+  const tableId = resolvedTableId.value;
+  if (!tableId) {
+    nextTick(updateHorizontalScroll);
+    return;
+  }
+  work.updateTable(tableId, { rowHeight: value }).catch((e: any) => {
+    const message = e?.response?.data?.message ?? '保存行高失败';
+    showUpdateErrorToast(message);
+    rowHeight.value = previous;
+  });
+  nextTick(updateHorizontalScroll);
 }
 
 function getFieldWidth(field: Field) {
@@ -399,7 +453,7 @@ const toolbarActions = [
   { label: '筛选', icon: 'pi pi-filter' },
   { label: '分组', icon: 'pi pi-sitemap' },
   { label: '排序', icon: 'pi pi-sort-amount-down' },
-  { label: '行高', icon: 'pi pi-bars' },
+  { label: '行高', icon: 'pi pi-bars', action: toggleRowHeightPopover },
 ];
 
 const rowMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
@@ -508,6 +562,10 @@ async function reload() {
   if (!tableId) return;
   loading.value = true;
   try {
+    const table = await work.loadTable(tableId);
+    if (table?.rowHeight !== undefined) {
+      rowHeight.value = normalizeRowHeight(table.rowHeight);
+    }
     await work.loadFields(tableId);
     await work.loadRecords(tableId);
     nextTick(updateHorizontalScroll);
@@ -607,13 +665,5 @@ async function remove(recordId: string) {
 :deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell .p-checkbox) {
   opacity: 1;
   pointer-events: auto;
-}
-
-:deep(.table-row-select .p-datatable-thead > tr > th.field-cell),
-:deep(.table-row-select .p-datatable-tbody > tr > td.field-cell),
-:deep(.table-row-select .p-datatable-tfoot > tr > td.field-cell) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 </style>

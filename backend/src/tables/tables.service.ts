@@ -27,7 +27,7 @@ export class TablesService {
 
     return this.prisma.table.create({
       data: { name: dto.name, baseId: dto.baseId },
-      select: { id: true, name: true, baseId: true, createdAt: true },
+      select: { id: true, name: true, baseId: true, rowHeight: true, createdAt: true },
     });
   }
 
@@ -35,7 +35,7 @@ export class TablesService {
     await this.assertBaseReadable(userId, baseId);
     return this.prisma.table.findMany({
       where: { baseId },
-      select: { id: true, name: true, createdAt: true },
+      select: { id: true, name: true, rowHeight: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -43,7 +43,7 @@ export class TablesService {
   async get(userId: string, tableId: string) {
     const table = await this.prisma.table.findUnique({
       where: { id: tableId },
-      select: { id: true, name: true, baseId: true },
+      select: { id: true, name: true, baseId: true, rowHeight: true },
     });
     if (!table) throw new ForbiddenException('Table not found');
     await this.assertBaseReadable(userId, table.baseId);
@@ -60,10 +60,18 @@ export class TablesService {
     const { role } = await this.assertBaseReadable(userId, table.baseId);
     if (role === 'VIEWER') throw new ForbiddenException('No write permission');
 
+    const data: { name?: string; rowHeight?: number } = {};
+    if (dto.name) {
+      data.name = dto.name;
+    }
+    if (typeof dto.rowHeight === 'number') {
+      data.rowHeight = dto.rowHeight;
+    }
+
     return this.prisma.table.update({
       where: { id: tableId },
-      data: { name: dto.name },
-      select: { id: true, name: true, createdAt: true },
+      data,
+      select: { id: true, name: true, rowHeight: true, createdAt: true },
     });
   }
 

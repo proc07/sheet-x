@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Table" ADD COLUMN     "rowHeight" INTEGER NOT NULL DEFAULT 1;

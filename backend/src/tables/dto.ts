@@ -1,4 +1,4 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateTableDto {
   @IsString()
@@ -10,7 +10,13 @@ export class CreateTableDto {
 }
 
 export class UpdateTableDto {
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  name!: string;
+  name?: string;
+
+  @IsOptional()
+  @IsInt()
+  @IsIn([1, 2, 4, 6])
+  rowHeight?: number;
 }
