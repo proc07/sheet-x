@@ -133,7 +133,7 @@ export const useWorkStore = defineStore('work', {
       await this.loadFields(tableId);
       return data as Field;
     },
-    async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number }>) {
+    async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number; hidden?: boolean }>) {
       if (!tableId || fields.length === 0) return [];
       const { data } = await api.patch('/fields/layout', { tableId, fields });
       if (Array.isArray(data)) {

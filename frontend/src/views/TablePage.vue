@@ -13,6 +13,7 @@
           <span>{{ action.label }}</span>
         </button>
       </div>
+
       <Popover ref="rowHeightPopover">
         <div class="w-35">
           <div class="px-2 pt-2 text-sm text-slate-400">设置行高</div>
@@ -27,6 +28,50 @@
             >
               <i class="pi" :class="option.iconClass"></i>
               <span>{{ option.label }}</span>
+            </button>
+          </div>
+        </div>
+      </Popover>
+
+      <Popover ref="fieldConfigPopover">
+        <div ref="fieldConfigContent" class="w-72">
+          <div ref="fieldConfigHeader" class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm font-medium text-slate-700">
+            <span>字段配置</span>
+            <i class="pi pi-question-circle text-slate-400"></i>
+          </div>
+          <ScrollPanel class="field-config-scroll" :style="{ maxHeight: `${fieldConfigListMaxHeight}px` }">
+            <div class="py-1">
+              <div
+                v-for="field in work.fields"
+                :key="`config-${field.id}`"
+                class="flex items-center justify-between gap-2 px-2 py-2 text-sm transition hover:bg-slate-50"
+              >
+                <div class="flex min-w-0 items-center gap-2" :class="isFieldHidden(field) ? 'text-slate-400' : 'text-slate-700'">
+                  <span v-if="getFieldMeta(field).text" class="field-type-text">{{ getFieldMeta(field).text }}</span>
+                  <i v-else class="pi field-type-icon" :class="getFieldMeta(field).icon"></i>
+                  <span class="truncate">{{ field.name }}</span>
+                  <i v-if="field.required" class="pi pi-lock text-slate-400"></i>
+                </div>
+                <div class="flex items-center gap-1 text-slate-500">
+                  <button
+                    type="button"
+                    class="rounded-md p-1 transition hover:bg-slate-100"
+                    :aria-label="isFieldHidden(field) ? '显示字段' : '隐藏字段'"
+                    @click.stop="toggleFieldVisibility(field)"
+                  >
+                    <i class="pi" :class="isFieldHidden(field) ? 'pi-eye-slash' : 'pi-eye'"></i>
+                  </button>
+                  <button type="button" class="rounded-md p-1 transition hover:bg-slate-100" aria-label="更多">
+                    <i class="pi pi-ellipsis-h"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </ScrollPanel>
+          <div ref="fieldConfigFooter" class="border-t border-slate-200/80 px-3 py-2">
+            <button type="button" class="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
+              <i class="pi pi-plus"></i>
+              <span>新增字段</span>
             </button>
           </div>
         </div>
@@ -91,12 +136,12 @@
           :bodyStyle="{ width: '40px', textAlign: 'center' }"
         ></Column>
         <Column
-          v-for="field in work.fields"
+          v-for="field in visibleFields"
           :key="field.id"
           :columnKey="field.id"
           :header="field.name"
           :field="`${field.id}`"
-          :style="{ minWidth: '100px', width: `${getFieldWidth(field)}px`}"
+          :style="{ minWidth: `${DEFAULT_FIELD_WIDTH}px`, width: `${getFieldWidth(field)}px`}"
           headerClass="field-cell"
           bodyClass="field-cell"
           :pt="{ headerCell: { 'data-field-id': field.id } }"
@@ -141,9 +186,9 @@
               footer-style="text-align: right; font-size: 12px; color: #6b7280;"
             />
             <Column
-              v-for="(field, index) in work.fields"
+              v-for="(field, index) in visibleFields"
               :key="`footer-${field.id}`"
-              :footer=" work.fields.length - 1 === index ? '' : '选择计算'"
+              :footer=" visibleFields.length - 1 === index ? '' : '选择计算'"
               footer-style="text-align: right; font-size: 12px; color: #6b7280;"
             />
           </Row>
@@ -250,6 +295,9 @@ const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as
 const newFieldName = ref('');
 const newFieldType = ref<Field['type']>('TEXT');
 const fieldCreatePopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const fieldConfigContent = ref<HTMLElement | null>(null);
+const fieldConfigListMaxHeight = ref(320);
 const fieldCreateName = ref('');
 const fieldCreateType = ref<Field['type']>('TEXT');
 const fieldCreateDefault = ref('');
@@ -266,6 +314,17 @@ const recordIndexMap = computed(() => {
 });
 
 const selectedRowIds = computed(() => new Set(selectedRows.value.map((row) => row.id)));
+const visibleFields = computed(() => work.fields.filter((field) => !field.options?.hidden));
+
+const fieldTypeMeta: Record<Field['type'], { icon?: string; text?: string }> = {
+  TEXT: { icon: 'pi-pen-to-square' },
+  NUMBER: { icon: 'pi-sort-numeric-up' },
+  DATE: { icon: 'pi pi-calendar-clock' },
+  SINGLE_SELECT: { icon: 'pi pi-check-circle' },
+  MULTI_SELECT: { icon: 'pi pi-list-check' },
+  USER: { icon: 'pi pi-user' },
+  ATTACHMENT: { icon: 'pi pi-paperclip' },
+};
 
 const DEFAULT_FIELD_WIDTH = 120;
 
@@ -313,6 +372,52 @@ function updateHorizontalScroll() {
 }
 function toggleRowHeightPopover(event: MouseEvent) {
   rowHeightPopover.value?.toggle(event);
+}
+
+function toggleFieldConfigPopover(event: MouseEvent) {
+  fieldConfigPopover.value?.toggle(event);
+  nextTick(updateFieldConfigMaxHeight);
+}
+
+function updateFieldConfigMaxHeight() {
+  const content = fieldConfigContent.value;
+  if (!content) return;
+  const rect = content.getBoundingClientRect();
+  if (!rect.height && !rect.top) return;
+  const padding = 16;
+  const available = window.innerHeight - rect.top - padding;
+  const nextHeight = Math.max(0, Math.floor(available));
+  if (Number.isFinite(nextHeight)) {
+    fieldConfigListMaxHeight.value = nextHeight;
+  }
+}
+
+function getFieldMeta(field: Field) {
+  return fieldTypeMeta[field.type] ?? { icon: 'pi pi-align-left' };
+}
+
+function isFieldHidden(field: Field) {
+  return Boolean(field.options?.hidden);
+}
+
+async function toggleFieldVisibility(field: Field) {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
+  const nextHidden = !isFieldHidden(field);
+  const previousOptions = field.options ?? {};
+  field.options = { ...previousOptions, hidden: nextHidden };
+  try {
+    await work.updateFieldLayout(tableId, [{ id: field.id, hidden: nextHidden }]);
+    nextTick(updateHorizontalScroll);
+  } catch (e: any) {
+    field.options = previousOptions;
+    showUpdateErrorToast(e?.response?.data?.message ?? '更新字段显示状态失败');
+  }
+}
+
+function openFieldCreateFromConfig(event: MouseEvent) {
+  fieldConfigPopover.value?.hide?.();
+  fieldCreatePopover.value?.toggle(event);
 }
 
 function getRowClass(data: RecordRow) {
@@ -368,7 +473,7 @@ function selectRowHeight(value: typeof rowHeightOptions[number]['value']) {
 function getFieldWidth(field: Field) {
   const width = field.options?.width;
   if (typeof width === 'number' && Number.isFinite(width)) {
-    return Math.max(100, Math.round(width));
+    return Math.max(DEFAULT_FIELD_WIDTH, Math.round(width));
   }
   return DEFAULT_FIELD_WIDTH;
 }
@@ -397,7 +502,7 @@ function showUpdateErrorToast(detail: string, summary = '更新失败') {
   });
 }
 
-async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number }>) {
+async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number; hidden?: boolean }>) {
   const tableId = resolvedTableId.value;
   if (!tableId || updates.length === 0) return;
   try {
@@ -415,7 +520,19 @@ const onColReorder = async (_event: DataTableColumnReorderEvent) => {
   if (orderIds.length === 0) return;
   // Sync store order with UI order, then persist positions.
   const fieldMap = new Map(work.fields.map((field) => [field.id, field]));
-  const orderedFields = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
+  const orderedVisible = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
+  const visibleCount = work.fields.filter((field) => !field.options?.hidden).length;
+  if (orderedVisible.length !== visibleCount) return;
+  const orderedFields: Field[] = [];
+  let visibleIndex = 0;
+  for (const field of work.fields) {
+    if (field.options?.hidden) {
+      orderedFields.push(field);
+    } else {
+      orderedFields.push(orderedVisible[visibleIndex]);
+      visibleIndex += 1;
+    }
+  }
   if (orderedFields.length !== work.fields.length) return;
   orderedFields.forEach((field, index) => {
     field.position = index;
@@ -461,13 +578,26 @@ const updateTableHeight = () => {
   }
   nextTick(updateHorizontalScroll);
 };
+
+const handleWindowResize = () => {
+  updateTableHeight();
+  updateFieldConfigMaxHeight();
+};
+
+const handleWindowScroll = () => {
+  updateFieldConfigMaxHeight();
+};
+
 onMounted(() => {
   updateTableHeight();
-  window.addEventListener('resize', updateTableHeight);
+  updateFieldConfigMaxHeight();
+  window.addEventListener('resize', handleWindowResize);
+  window.addEventListener('scroll', handleWindowScroll, true);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateTableHeight);
+  window.removeEventListener('resize', handleWindowResize);
+  window.removeEventListener('scroll', handleWindowScroll, true);
 });
 
 const fieldTypeOptions = [
@@ -507,7 +637,7 @@ async function submitFieldCreate() {
 
 const toolbarActions = [
   { label: '添加记录', icon: 'pi pi-plus', action: createRecord },
-  { label: '字段配置', icon: 'pi pi-sliders-h' },
+  { label: '字段配置', icon: 'pi pi-cog', action: toggleFieldConfigPopover },
   { label: '视图配置', icon: 'pi pi-th-large' },
   { label: '筛选', icon: 'pi pi-filter' },
   { label: '分组', icon: 'pi pi-sitemap' },
@@ -571,6 +701,7 @@ function onInsertInput(direction: 'above' | 'below', event: InputNumberInputEven
   }
 }
 
+// todo: optimize batch insert
 async function insertRows(direction: 'above' | 'below') {
   const tableId = resolvedTableId.value;
   const anchor = contextMenuRow.value;
@@ -694,6 +825,29 @@ async function remove(recordId: string) {
 }
 :deep(.table-row-select .p-datatable-tbody > tr:hover > td) {
   background-color: #f1f5f9;
+}
+
+.field-type-text {
+  min-width: 28px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.field-type-icon {
+  min-width: 28px;
+  text-align: center;
+  color: #64748b;
+}
+
+:deep(.field-config-scroll .p-scrollpanel-bar-x) {
+  display: none;
+}
+
+:deep(.field-config-scroll .p-scrollpanel-bar-y) {
+  width: 6px;
+  border-radius: 9999px;
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {

@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFieldDto, UpdateFieldLayoutDto } from './dto';
 
+const DEFAULT_FIELD_WIDTH = 120;
+
 @Injectable()
 export class FieldsService {
   constructor(private prisma: PrismaService) {}
@@ -96,9 +98,16 @@ export class FieldsService {
       if (typeof field.position === 'number' && Number.isFinite(field.position)) {
         data.position = Math.max(0, Math.trunc(field.position));
       }
+      const baseOptions = optionsMap.get(field.id) ?? {};
+      let nextOptions: Record<string, any> | null = null;
       if (typeof field.width === 'number' && Number.isFinite(field.width)) {
-        const baseOptions = optionsMap.get(field.id) ?? {};
-        data.options = { ...baseOptions, width: Math.max(40, Math.trunc(field.width)) };
+        nextOptions = { ...(nextOptions ?? baseOptions), width: Math.max(DEFAULT_FIELD_WIDTH, Math.trunc(field.width)) };
+      }
+      if (typeof field.hidden === 'boolean') {
+        nextOptions = { ...(nextOptions ?? baseOptions), hidden: field.hidden };
+      }
+      if (nextOptions) {
+        data.options = nextOptions;
       }
       if (Object.keys(data).length === 0) {
         continue;

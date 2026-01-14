@@ -38,6 +38,10 @@ export class UpdateFieldLayoutItemDto {
   @IsInt()
   @Min(40)
   width?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  hidden?: boolean;
 }
 
 export class UpdateFieldLayoutDto {
