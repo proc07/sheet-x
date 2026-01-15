@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { Field, RecordRow } from '../../stores/work';
+import type { Field, RecordRow } from '../stores/work';
 
 const props = defineProps<{
   field: Field;

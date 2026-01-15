@@ -1,82 +1,14 @@
 <template>
   <div class="flex h-full min-h-0 flex-col ">
-    <div class="overflow-hidden shrink-0">
-      <div class="flex flex-wrap items-center gap-2 py-2 text-sm">
-        <button
-          v-for="action in toolbarActions"
-          :key="action.label"
-          type="button"
-          class="flex items-center gap-2 rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 cursor-pointer"
-          @click="action.action?.($event)"
-        >
-          <i :class="action.icon"></i>
-          <span>{{ action.label }}</span>
-        </button>
-      </div>
-
-      <Popover ref="rowHeightPopover">
-        <div class="w-35">
-          <div class="px-2 pt-2 text-sm text-slate-400">设置行高</div>
-          <div class="pt-1">
-            <button
-              v-for="option in rowHeightOptions"
-              :key="option.value"
-              type="button"
-              class="flex w-full items-center gap-2 px-2 py-2 text-sm transition hover:bg-slate-100"
-              :class="rowHeight === option.value ? 'text-blue-600' : 'text-slate-600'"
-              @click="selectRowHeight(option.value)"
-            >
-              <i class="pi" :class="option.iconClass"></i>
-              <span>{{ option.label }}</span>
-            </button>
-          </div>
-        </div>
-      </Popover>
-
-      <Popover ref="fieldConfigPopover">
-        <div ref="fieldConfigContent" class="w-72">
-          <div ref="fieldConfigHeader" class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm font-medium text-slate-700">
-            <span>字段配置</span>
-            <i class="pi pi-question-circle text-slate-400"></i>
-          </div>
-          <div class="field-config-scroll" :style="{ maxHeight: `${fieldConfigListMaxHeight}px` }">
-            <div class="py-1">
-              <div
-                v-for="field in work.fields"
-                :key="`config-${field.id}`"
-                class="flex items-center justify-between gap-2 px-2 py-2 text-sm transition hover:bg-slate-50"
-              >
-                <div class="flex min-w-0 items-center gap-2" :class="isFieldHidden(field) ? 'text-slate-400' : 'text-slate-700'">
-                  <span v-if="getFieldMeta(field).text" class="field-type-text">{{ getFieldMeta(field).text }}</span>
-                  <i v-else class="pi field-type-icon" :class="getFieldMeta(field).icon"></i>
-                  <span class="truncate">{{ field.name }}</span>
-                  <i v-if="field.required" class="pi pi-lock text-slate-400"></i>
-                </div>
-                <div class="flex items-center gap-1 text-slate-500">
-                  <button
-                    type="button"
-                    class="rounded-md p-1 transition hover:bg-slate-100"
-                    :aria-label="isFieldHidden(field) ? '显示字段' : '隐藏字段'"
-                    @click.stop="toggleFieldVisibility(field)"
-                  >
-                    <i class="pi" :class="isFieldHidden(field) ? 'pi-eye-slash' : 'pi-eye'"></i>
-                  </button>
-                  <button type="button" class="rounded-md p-1 transition hover:bg-slate-100" aria-label="更多">
-                    <i class="pi pi-ellipsis-h"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div ref="fieldConfigFooter" class="border-t border-slate-200/80 px-3 py-2">
-            <button type="button" class="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
-              <i class="pi pi-plus"></i>
-              <span>新增字段</span>
-            </button>
-          </div>
-        </div>
-      </Popover>
-    </div>
+    <TableToolbar
+      :fields="work.fields"
+      :row-height="rowHeight"
+      :loading="loading"
+      @update:row-height="selectRowHeight"
+      @create-record="createRecord"
+      @toggle-field-visibility="toggleFieldVisibility"
+      @open-field-create="openFieldCreateFromConfig"
+    />
 
     <div
       ref="tableWrap"
@@ -84,6 +16,7 @@
     >
       <DataTable
         ref="dataTable"
+        :key="rowHeight"
         class="w-full table-row-select"
         scrollable
         showGridlines
@@ -302,10 +235,18 @@ import type { InputNumberInputEvent } from 'primevue/inputnumber';
 import type { MenuItem } from 'primevue/menuitem';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
-import { api, getTableStats, getBatchTableStats } from '../api';
+import { api, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
-import CellEditor from './components/CellEditor.vue';
+import CellEditor from '../components/CellEditor.vue';
+import TableToolbar from '../components/TableToolbar.vue';
 import { defaultOptionsForField } from '../utils/field';
+import { 
+  DEFAULT_FIELD_WIDTH, 
+  HEIGHT_PER_ROW, 
+  rowHeightOptions, 
+  statOptions, 
+  fieldTypeOptions 
+} from '../constants/table';
 
 const props = defineProps<{ tableId?: string }>();
 
@@ -319,7 +260,6 @@ const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as
 const newFieldName = ref('');
 const newFieldType = ref<Field['type']>('TEXT');
 const fieldCreatePopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
-const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
 const fieldCreateName = ref('');
@@ -340,18 +280,6 @@ const recordIndexMap = computed(() => {
 const selectedRowIds = computed(() => new Set(selectedRows.value.map((row) => row.id)));
 const visibleFields = computed(() => work.fields.filter((field) => !field.options?.hidden));
 
-const fieldTypeMeta: Record<Field['type'], { icon?: string; text?: string }> = {
-  TEXT: { icon: 'pi-pen-to-square' },
-  NUMBER: { icon: 'pi-sort-numeric-up' },
-  DATE: { icon: 'pi pi-calendar-clock' },
-  SINGLE_SELECT: { icon: 'pi pi-check-circle' },
-  MULTI_SELECT: { icon: 'pi pi-list-check' },
-  USER: { icon: 'pi pi-user' },
-  ATTACHMENT: { icon: 'pi pi-paperclip' },
-};
-
-const DEFAULT_FIELD_WIDTH = 120;
-
 function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
   const previous = recordUpdateQueue.get(recordId) ?? Promise.resolve();
   const next = previous
@@ -366,29 +294,13 @@ function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
   return next;
 }
 
-const HEIGHT_PER_ROW = 21;
 const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
-const rowHeightOptions = [
-  { value: 1, label: '低', iconClass: 'pi-minus' },
-  { value: 2, label: '中等', iconClass: 'pi-equals' },
-  { value: 4, label: '高', iconClass: 'pi-bars' },
-  { value: 6, label: '超高', iconClass: 'pi-align-justify' },
-] as const;
 
 // Stats related
 const fieldStats = ref<Record<string, { type: string; value: string | number; loading: boolean }>>({});
 const statPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const currentStatFieldId = ref<string | null>(null);
 const statPopoverVisible = ref(false);
-
-const statOptions = [
-  { label: '不展示', value: 'none' },
-  { label: '记录总数', value: 'countAll' },
-  { label: '未填写', value: 'empty' },
-  { label: '已填写', value: 'filled' },
-  { label: '未填写占比', value: 'percentEmpty' },
-  { label: '已填写占比', value: 'percentFilled' },
-];
 
 function getStatLabel(fieldId: string) {
   const stat = fieldStats.value[fieldId];
@@ -474,9 +386,10 @@ watch(() => work.fields, async (fields) => {
   }
 }, { immediate: true, deep: true });
 
+const ROW_PADDING = 11.5
 const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions[0].value);
 const virtualScrollerOptions = computed(() => ({
-  itemSize: 10 + rowHeight.value * HEIGHT_PER_ROW,
+  itemSize: ROW_PADDING + rowHeight.value * HEIGHT_PER_ROW,
   delay: 0,
   numToleratedItems: 10,
 }));
@@ -494,14 +407,6 @@ function updateHorizontalScroll() {
     hasHorizontalScroll.value = next;
   }
 }
-function toggleRowHeightPopover(event: MouseEvent) {
-  rowHeightPopover.value?.toggle(event);
-}
-
-function toggleFieldConfigPopover(event: MouseEvent) {
-  fieldConfigPopover.value?.toggle(event);
-  nextTick(updateFieldConfigMaxHeight);
-}
 
 function updateFieldConfigMaxHeight() {
   const content = fieldConfigContent.value;
@@ -514,10 +419,6 @@ function updateFieldConfigMaxHeight() {
   if (Number.isFinite(nextHeight)) {
     fieldConfigListMaxHeight.value = nextHeight;
   }
-}
-
-function getFieldMeta(field: Field) {
-  return fieldTypeMeta[field.type] ?? { icon: 'pi pi-align-left' };
 }
 
 function isFieldHidden(field: Field) {
@@ -540,7 +441,6 @@ async function toggleFieldVisibility(field: Field) {
 }
 
 function openFieldCreateFromConfig(event: MouseEvent) {
-  fieldConfigPopover.value?.hide?.();
   fieldCreatePopover.value?.toggle(event);
 }
 
@@ -577,21 +477,38 @@ function onSelectAllChange(event: DataTableSelectAllChangeEvent) {
   selectedRows.value = event.checked ? [...work.records] : [];
 }
 
-function selectRowHeight(value: typeof rowHeightOptions[number]['value']) {
+const dataTable = ref<any>(null);
+
+function selectRowHeight(value: number) {
   const previous = rowHeight.value;
-  rowHeight.value = value;
-  rowHeightPopover.value?.hide?.();
-  const tableId = resolvedTableId.value;
-  if (!tableId) {
-    nextTick(updateHorizontalScroll);
-    return;
+  // Calculate current scroll index
+  const scroller = dataTable.value?.$el.querySelector('.p-datatable-wrapper') || dataTable.value?.$el.querySelector('.p-virtualscroller');
+  let topIndex = 0;
+  if (scroller) {
+    const oldItemSize = ROW_PADDING + previous * HEIGHT_PER_ROW;
+    topIndex = Math.floor(scroller.scrollTop / oldItemSize);
   }
+
+  rowHeight.value = value as typeof rowHeightOptions[number]['value'];
+  
+  // Restore scroll position after render
+  nextTick(() => {
+    const newScroller = dataTable.value?.$el.querySelector('.p-datatable-wrapper') || dataTable.value?.$el.querySelector('.p-virtualscroller');
+    if (newScroller) {
+      const newItemSize = ROW_PADDING + value * HEIGHT_PER_ROW;
+      newScroller.scrollTop = topIndex * newItemSize;
+    }
+    updateHorizontalScroll();
+  });
+
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
+
   work.updateTable(tableId, { rowHeight: value }).catch((e: any) => {
     const message = e?.response?.data?.message ?? '保存行高失败';
     showUpdateErrorToast(message);
     rowHeight.value = previous;
   });
-  nextTick(updateHorizontalScroll);
 }
 
 function getFieldWidth(field: Field) {
@@ -724,14 +641,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleWindowScroll, true);
 });
 
-const fieldTypeOptions = [
-  { label: '文本', value: 'TEXT' },
-  { label: '数字', value: 'NUMBER' },
-  { label: '日期', value: 'DATE' },
-  { label: '单选', value: 'SINGLE_SELECT' },
-  { label: '多选', value: 'MULTI_SELECT' },
-];
-
 function toggleFieldCreatePopover(event: MouseEvent) {
   fieldCreatePopover.value?.toggle(event);
 }
@@ -758,16 +667,6 @@ async function submitFieldCreate() {
   resetFieldCreateForm();
   closeFieldCreatePopover();
 }
-
-const toolbarActions = [
-  { label: '添加记录', icon: 'pi pi-plus', action: createRecord },
-  { label: '字段配置', icon: 'pi pi-cog', action: toggleFieldConfigPopover },
-  { label: '视图配置', icon: 'pi pi-th-large' },
-  { label: '筛选', icon: 'pi pi-filter' },
-  { label: '分组', icon: 'pi pi-sitemap' },
-  { label: '排序', icon: 'pi pi-sort-amount-down' },
-  { label: '行高', icon: 'pi pi-bars', action: toggleRowHeightPopover },
-];
 
 const rowMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
 const contextMenuRow = ref<RecordRow | null>(null);
