@@ -72,13 +72,18 @@
           v-for="field in visibleFields"
           :key="field.id"
           :columnKey="field.id"
-          :header="field.name"
           :field="`${field.id}`"
           :style="{ minWidth: `${DEFAULT_FIELD_WIDTH}px`, width: `${getFieldWidth(field)}px`}"
           headerClass="field-cell"
           bodyClass="field-cell"
           :pt="{ headerCell: { 'data-field-id': field.id } }"
         >
+          <template #header>
+            <div class="flex items-center gap-1 w-full">
+              <i class="pi text-slate-400 text-xs" :class="getFieldTypeIcon(field.type)"></i>
+              <span class="truncate">{{ field.name }}</span>
+            </div>
+          </template>
           <template #body="{ data }">
             <div class="w-full whitespace-normal overflow-hidden text-ellipsis" :class="`line-clamp-${rowHeight}`" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
               {{ data.data?.[field.id] }}
@@ -189,21 +194,46 @@
       </ContextMenu>
 
       <Popover ref="fieldCreatePopover">
-        <div class="w-80 space-y-4">
+        <div class="field-create-popover w-80 space-y-4">
           <div class="space-y-2">
             <div class="text-sm text-slate-500">标题</div>
             <InputText v-model="fieldCreateName" placeholder="请输入字段标题" class="w-full" />
           </div>
           <div class="space-y-2">
             <div class="text-sm text-slate-500">字段类型</div>
-            <Dropdown
-              v-model="fieldCreateType"
-              :options="fieldTypeOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="选择字段类型"
-              class="w-full"
-            />
+            <div class="w-full" @click.stop @mousedown.stop @mouseup.stop>
+              <Dropdown
+                v-model="fieldCreateType"
+                :options="fieldTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                optionGroupLabel="label"
+                optionGroupChildren="items"
+                filter
+                placeholder="选择字段类型"
+                class="w-full"
+                appendTo="self"
+              >
+                <template #optiongroup="slotProps">
+                  <div class="text-ms font-bold text-slate-500 py-1">{{ slotProps.option.label }}</div>
+                </template>
+                <template #option="slotProps">
+                  <div class="flex items-center gap-2">
+                    <i class="pi" :class="slotProps.option.icon"></i>
+                    <div>{{ slotProps.option.label }}</div>
+                  </div>
+                </template>
+                <template #value="slotProps">
+                  <div v-if="slotProps.value" class="flex items-center gap-2">
+                    <i class="pi" :class="getFieldTypeIcon(slotProps.value)"></i>
+                    <div>{{ getFieldTypeLabel(slotProps.value) }}</div>
+                  </div>
+                  <span v-else>
+                    {{ slotProps.placeholder }}
+                  </span>
+                </template>
+              </Dropdown>
+            </div>
           </div>
           <div class="space-y-2">
             <div class="text-sm text-slate-500">默认值</div>
@@ -245,7 +275,9 @@ import {
   HEIGHT_PER_ROW, 
   rowHeightOptions, 
   statOptions, 
-  fieldTypeOptions 
+  fieldTypeOptions,
+  fieldTypeMeta,
+  FIELD_TYPE_TEXT
 } from '../constants/table';
 
 const props = defineProps<{ tableId?: string }>();
@@ -255,15 +287,30 @@ const router = useRouter();
 const work = useWorkStore();
 const toast = useToast();
 
+function getFieldTypeIcon(type: Field['type']) {
+  return fieldTypeMeta[type]?.icon ?? 'pi-question';
+}
+
+function getFieldTypeLabel(type: Field['type']) {
+  // Flatten options to find label
+  for (const group of fieldTypeOptions) {
+    const found = group.items.find(item => item.value === type);
+    if (found) return found.label;
+  }
+  return type;
+}
+
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
 const newFieldName = ref('');
-const newFieldType = ref<Field['type']>('TEXT');
+const newFieldType = ref<Field['type']>(FIELD_TYPE_TEXT);
 const fieldCreatePopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+
+
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
 const fieldCreateName = ref('');
-const fieldCreateType = ref<Field['type']>('TEXT');
+const fieldCreateType = ref<Field['type']>(FIELD_TYPE_TEXT);
 const fieldCreateDefault = ref('');
 const recordUpdateQueue = new Map<string, Promise<void>>();
 const editingRowId = ref<string | null>(null);
@@ -294,7 +341,6 @@ function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
   return next;
 }
 
-const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 
 // Stats related
 const fieldStats = ref<Record<string, { type: string; value: string | number; loading: boolean }>>({});
@@ -650,7 +696,7 @@ function closeFieldCreatePopover() {
 
 function resetFieldCreateForm() {
   fieldCreateName.value = '';
-  fieldCreateType.value = 'TEXT';
+  fieldCreateType.value = FIELD_TYPE_TEXT;
   fieldCreateDefault.value = '';
 }
 

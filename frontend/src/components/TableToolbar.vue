@@ -32,7 +32,7 @@
       </div>
     </Popover>
 
-    <Popover ref="fieldConfigPopover">
+    <Popover ref="fieldConfigPopover" :dismissable="false">
       <div ref="fieldConfigContent" class="w-72">
         <div ref="fieldConfigHeader" class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm font-medium text-slate-700">
           <span>字段配置</span>
@@ -97,7 +97,7 @@ const emit = defineEmits<{
 }>();
 
 const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
-const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void; visible: boolean } | null>(null);
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
 
@@ -110,9 +110,34 @@ function selectRowHeight(value: number) {
   rowHeightPopover.value?.hide?.();
 }
 
+function handleFieldConfigOutsideClick(event: Event) {
+  const popover = fieldConfigContent.value;
+  if (!popover) return;
+
+  const target = event.target as HTMLElement;
+  // If click is inside the popover, ignore
+  if (popover.contains(target)) return;
+
+  // If click is inside a dropdown panel, ignore (if we have dropdowns in here later)
+  if (target.closest('.field-create-popover')) return;
+
+  // Otherwise, close
+  fieldConfigPopover.value?.hide();
+  document.removeEventListener('click', handleFieldConfigOutsideClick, true);
+}
+
 function toggleFieldConfigPopover(event: MouseEvent) {
-  fieldConfigPopover.value?.toggle(event);
-  nextTick(updateFieldConfigMaxHeight);
+  // visible property exists
+  if (fieldConfigPopover.value?.visible) {
+    fieldConfigPopover.value?.hide();
+    document.removeEventListener('click', handleFieldConfigOutsideClick, true);
+  } else {
+    fieldConfigPopover.value?.toggle(event);
+    nextTick(updateFieldConfigMaxHeight);
+    setTimeout(() => {
+        document.addEventListener('click', handleFieldConfigOutsideClick, true);
+    }, 0);
+  }
 }
 
 function updateFieldConfigMaxHeight() {
@@ -120,7 +145,7 @@ function updateFieldConfigMaxHeight() {
   if (!content) return;
   const rect = content.getBoundingClientRect();
   if (!rect.height && !rect.top) return;
-  const padding = 16;
+  const padding = 100;
   const available = window.innerHeight - rect.top - padding;
   const nextHeight = Math.max(0, Math.floor(available));
   if (Number.isFinite(nextHeight)) {
@@ -141,7 +166,9 @@ function toggleFieldVisibility(field: Field) {
 }
 
 function openFieldCreateFromConfig(event: MouseEvent) {
-  fieldConfigPopover.value?.hide?.();
+  // Don't hide, just emit the event.
+  // The user wants both popovers to stay open.
+  // fieldConfigPopover.value?.hide?.();
   emit('openFieldCreate', event);
 }
 

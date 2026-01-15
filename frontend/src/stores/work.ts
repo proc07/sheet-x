@@ -21,7 +21,10 @@ export type Table = { id: string; name: string; createdAt: string; rowHeight?: n
 export type Field = {
   id: string;
   name: string;
-  type: 'TEXT'|'NUMBER'|'DATE'|'SINGLE_SELECT'|'MULTI_SELECT'|'USER'|'ATTACHMENT';
+  type: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'USER' | 'ATTACHMENT'
+    | 'GROUP' | 'CHECKBOX' | 'URL' | 'FORMULA' | 'LOOKUP' // Routine
+    | 'WORKFLOW' | 'BUTTON' | 'AUTO_NUMBER' | 'PHONE' | 'EMAIL' | 'LOCATION' | 'BARCODE' | 'PROGRESS' | 'CURRENCY' | 'RATING' // Business
+    | 'LINK_BIDIRECTIONAL' | 'LINK_UNIDIRECTIONAL' | 'CREATED_BY' | 'UPDATED_BY' | 'CREATED_TIME' | 'UPDATED_TIME'; // Advanced
   required: boolean;
   options?: any;
   position: number;
