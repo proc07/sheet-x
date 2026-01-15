@@ -80,7 +80,7 @@
         >
           <template #header>
             <div class="flex items-center gap-1 w-full">
-              <i class="pi text-slate-400 text-xs" :class="getFieldTypeIcon(field.type)"></i>
+              <i class="pi text-slate-400 text-xs mr-1" :class="getFieldTypeIcon(field.type)"></i>
               <span class="truncate">{{ field.name }}</span>
             </div>
           </template>
@@ -101,7 +101,7 @@
         </Column>
         <Column 
           columnKey="field-add"
-          :style="hasHorizontalScroll ? '64px' : 'auto'"
+          :style="{ width: hasHorizontalScroll ?  DEFAULT_FIELD_WIDTH + 'px' : 'auto' }"
           :reorderableColumn="false"
         >
           <template #header>
@@ -124,12 +124,12 @@
               footer-style="text-align: right; font-size: 12px; color: #6b7280;"
             />
             <Column
-              v-for="field in visibleFields"
+              v-for="(field, index) in visibleFields"
               :key="`footer-${field.id}`"
               footer-style="text-align: right; font-size: 12px; color: #6b7280; cursor: pointer;"
             >
               <template #footer>
-                 <div @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
+                 <div v-show="index !== visibleFields.length - 1" @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
                    <span>{{ getStatLabel(field.id) }}</span>
                    <i 
                     class="pi text-[12px] text-slate-400 group-hover:text-slate-600"

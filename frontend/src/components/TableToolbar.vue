@@ -34,9 +34,11 @@
 
     <Popover ref="fieldConfigPopover" :dismissable="false">
       <div ref="fieldConfigContent" class="w-72">
-        <div ref="fieldConfigHeader" class="flex items-center gap-2 border-b border-slate-200/80 px-3 py-2 text-sm font-medium text-slate-700">
-          <span>字段配置</span>
-          <i class="pi pi-question-circle text-slate-400"></i>
+        <div class="border-b border-slate-200/80">
+          <div ref="fieldConfigHeader" class="mb-1 flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700">
+            <span>字段配置</span>
+            <i class="pi pi-question-circle text-slate-400"></i>
+          </div>
         </div>
         <div class="field-config-scroll" :style="{ maxHeight: `${fieldConfigListMaxHeight}px` }">
           <div class="py-1">
@@ -68,7 +70,7 @@
           </div>
         </div>
         <div ref="fieldConfigFooter" class="border-t border-slate-200/80 px-3 py-2">
-          <button type="button" class="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
+          <button type="button" class="w-full mt-1 flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
             <i class="pi pi-plus"></i>
             <span>新增字段</span>
           </button>
