@@ -89,6 +89,7 @@ const props = defineProps<{
   fields: Field[];
   rowHeight: number;
   loading: boolean;
+  isFieldCreateOpen?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -120,8 +121,8 @@ function handleFieldConfigOutsideClick(event: Event) {
   // If click is inside the popover, ignore
   if (popover.contains(target)) return;
 
-  // If click is inside a dropdown panel, ignore (if we have dropdowns in here later)
-  if (target.closest('.field-create-popover')) return;
+  // If field create modal is open, ignore outside clicks
+  if (props.isFieldCreateOpen) return;
 
   // Otherwise, close
   fieldConfigPopover.value?.hide();

@@ -4,6 +4,7 @@
       :fields="work.fields"
       :row-height="rowHeight"
       :loading="loading"
+      :is-field-create-open="fieldCreateVisible"
       @update:row-height="selectRowHeight"
       @create-record="createRecord"
       @toggle-field-visibility="toggleFieldVisibility"
@@ -132,7 +133,7 @@
                  <div v-show="index !== visibleFields.length - 1" @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
                    <span>{{ getStatLabel(field.id) }}</span>
                    <i 
-                    class="pi text-[12px] text-slate-400 group-hover:text-slate-600"
+                    class="pi text-slate-400 group-hover:text-slate-600 !text-[12px]"
                     :class="currentStatFieldId === field.id && statPopoverVisible ? 'pi-sort-up-fill' : 'pi-sort-down-fill'"
                    ></i>
                  </div>
@@ -193,58 +194,13 @@
         </template>
       </ContextMenu>
 
-      <Popover ref="fieldCreatePopover">
-        <div class="field-create-popover w-80 space-y-4">
-          <div class="space-y-2">
-            <div class="text-sm text-slate-500">标题</div>
-            <InputText v-model="fieldCreateName" placeholder="请输入字段标题" class="w-full" />
-          </div>
-          <div class="space-y-2">
-            <div class="text-sm text-slate-500">字段类型</div>
-            <div class="w-full" @click.stop @mousedown.stop @mouseup.stop>
-              <Dropdown
-                v-model="fieldCreateType"
-                :options="fieldTypeOptions"
-                optionLabel="label"
-                optionValue="value"
-                optionGroupLabel="label"
-                optionGroupChildren="items"
-                filter
-                placeholder="选择字段类型"
-                class="w-full"
-                appendTo="self"
-              >
-                <template #optiongroup="slotProps">
-                  <div class="text-ms font-bold text-slate-500 py-1">{{ slotProps.option.label }}</div>
-                </template>
-                <template #option="slotProps">
-                  <div class="flex items-center gap-2">
-                    <i class="pi" :class="slotProps.option.icon"></i>
-                    <div>{{ slotProps.option.label }}</div>
-                  </div>
-                </template>
-                <template #value="slotProps">
-                  <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <i class="pi" :class="getFieldTypeIcon(slotProps.value)"></i>
-                    <div>{{ getFieldTypeLabel(slotProps.value) }}</div>
-                  </div>
-                  <span v-else>
-                    {{ slotProps.placeholder }}
-                  </span>
-                </template>
-              </Dropdown>
-            </div>
-          </div>
-          <div class="space-y-2">
-            <div class="text-sm text-slate-500">默认值</div>
-            <InputText v-model="fieldCreateDefault" placeholder="请输入内容" class="w-full" />
-          </div>
-          <div class="flex items-center justify-end gap-2 pt-2">
-            <Button label="取消" text severity="secondary" @click="closeFieldCreatePopover" />
-            <Button label="确定" @click="submitFieldCreate" />
-          </div>
-        </div>
-      </Popover>
+      <Dialog v-model:visible="fieldCreateVisible" id="field-create-popover-form" :draggable="false" modal header="新增字段" class="min-w-[320px]">
+        <FieldCreateForm 
+          :tableId="resolvedTableId"
+          @submit="handleFieldCreateSubmit"
+          @cancel="closeFieldCreatePopover"
+        />
+      </Dialog>
     </div>
   </div>
 </template>
@@ -269,16 +225,14 @@ import { api, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from '../components/CellEditor.vue';
 import TableToolbar from '../components/TableToolbar.vue';
-import { defaultOptionsForField } from '../utils/field';
 import { 
   DEFAULT_FIELD_WIDTH, 
   HEIGHT_PER_ROW, 
   rowHeightOptions, 
   statOptions, 
-  fieldTypeOptions,
   fieldTypeMeta,
-  FIELD_TYPE_TEXT
 } from '../constants/table';
+import FieldCreateForm from '../components/FieldCreateForm.vue';
 
 const props = defineProps<{ tableId?: string }>();
 
@@ -291,27 +245,32 @@ function getFieldTypeIcon(type: Field['type']) {
   return fieldTypeMeta[type]?.icon ?? 'pi-question';
 }
 
-function getFieldTypeLabel(type: Field['type']) {
-  // Flatten options to find label
-  for (const group of fieldTypeOptions) {
-    const found = group.items.find(item => item.value === type);
-    if (found) return found.label;
-  }
-  return type;
-}
-
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
-const newFieldName = ref('');
-const newFieldType = ref<Field['type']>(FIELD_TYPE_TEXT);
-const fieldCreatePopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const fieldCreateVisible = ref(false);
 
+function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
+  work.createField(tableId, { 
+    name: payload.name, 
+    type: payload.type, 
+    options: payload.options 
+  });
+  closeFieldCreatePopover();
+}
+
+function toggleFieldCreatePopover(event: MouseEvent, anchor?: HTMLElement) {
+  fieldCreateVisible.value = true;
+}
+
+function closeFieldCreatePopover() {
+  fieldCreateVisible.value = false;
+}
 
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
-const fieldCreateName = ref('');
-const fieldCreateType = ref<Field['type']>(FIELD_TYPE_TEXT);
-const fieldCreateDefault = ref('');
+
 const recordUpdateQueue = new Map<string, Promise<void>>();
 const editingRowId = ref<string | null>(null);
 const selectedRows = ref<RecordRow[]>([]);
@@ -486,8 +445,8 @@ async function toggleFieldVisibility(field: Field) {
   }
 }
 
-function openFieldCreateFromConfig(event: MouseEvent) {
-  fieldCreatePopover.value?.toggle(event);
+function openFieldCreateFromConfig(event: MouseEvent, anchor?: HTMLElement) {
+  toggleFieldCreatePopover(event, anchor);
 }
 
 function getRowClass(data: RecordRow) {
@@ -687,33 +646,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleWindowScroll, true);
 });
 
-function toggleFieldCreatePopover(event: MouseEvent) {
-  fieldCreatePopover.value?.toggle(event);
-}
-function closeFieldCreatePopover() {
-  fieldCreatePopover.value?.hide?.();
-}
-
-function resetFieldCreateForm() {
-  fieldCreateName.value = '';
-  fieldCreateType.value = FIELD_TYPE_TEXT;
-  fieldCreateDefault.value = '';
-}
-
-async function submitFieldCreate() {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  const name = fieldCreateName.value.trim();
-  if (!name) return;
-  const type = fieldCreateType.value;
-  const defaultValue = fieldCreateDefault.value.trim();
-  const baseOptions = defaultOptionsForField(type);
-  const options = defaultValue ? { ...(baseOptions ?? {}), defaultValue } : baseOptions;
-  await work.createField(tableId, { name, type, options });
-  resetFieldCreateForm();
-  closeFieldCreatePopover();
-}
-
 const rowMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
 const contextMenuRow = ref<RecordRow | null>(null);
 const insertAboveCount = ref(1);
@@ -833,15 +765,6 @@ async function reload() {
   } finally {
     loading.value = false;
   }
-}
-
-async function createField() {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  if (!newFieldName.value.trim()) return;
-  const options = defaultOptionsForField(newFieldType.value);
-  await work.createField(tableId, { name: newFieldName.value.trim(), type: newFieldType.value, options });
-  newFieldName.value = '';
 }
 
 async function createRecord() {
