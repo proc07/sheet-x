@@ -45,9 +45,9 @@
             <div
               v-for="field in fields"
               :key="`config-${field.id}`"
-              class="flex items-center justify-between gap-2 px-2 py-2 text-sm transition hover:bg-slate-50"
+              class="flex items-center justify-between rounded-md gap-2 px-2 py-2 text-sm transition hover:bg-slate-100"
             >
-              <div class="flex min-w-0 items-center gap-2" :class="isFieldHidden(field) ? 'text-slate-400' : 'text-slate-700'">
+              <div class="flex items-center gap-2" :class="isFieldHidden(field) ? 'text-slate-400' : 'text-slate-700'">
                 <span v-if="getFieldMeta(field).text" class="field-type-text">{{ getFieldMeta(field).text }}</span>
                 <i v-else class="pi field-type-icon" :class="getFieldMeta(field).icon"></i>
                 <span class="truncate">{{ field.name }}</span>
@@ -56,27 +56,34 @@
               <div class="flex items-center gap-1 text-slate-500">
                 <button
                   type="button"
-                  class="rounded-md p-1 transition hover:bg-slate-100"
+                  class="flex items-center cursor-pointer rounded-md p-1 transition hover:bg-slate-200"
                   :aria-label="isFieldHidden(field) ? '显示字段' : '隐藏字段'"
                   @click.stop="toggleFieldVisibility(field)"
                 >
                   <i class="pi" :class="isFieldHidden(field) ? 'pi-eye-slash' : 'pi-eye'"></i>
                 </button>
-                <button type="button" class="rounded-md p-1 transition hover:bg-slate-100" aria-label="更多">
+                <button
+                  type="button"
+                  class="flex items-center cursor-pointer rounded-md p-1 transition hover:bg-slate-200"
+                  aria-label="更多"
+                  @click.stop="toggleFieldMenu($event, field)"
+                >
                   <i class="pi pi-ellipsis-h"></i>
                 </button>
               </div>
             </div>
           </div>
         </div>
-        <div ref="fieldConfigFooter" class="border-t border-slate-200/80 px-3 py-2">
-          <button type="button" class="w-full mt-1 flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800" @click="openFieldCreateFromConfig">
-            <i class="pi pi-plus"></i>
+        <div ref="fieldConfigFooter" class="border-t border-slate-200/80">
+          <button type="button" class="w-full mt-1 cursor-pointer rounded-md flex items-center px-2 py-2 gap-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100" @click="openFieldCreateFromConfig">
+            <i class="pi pi-plus field-type-icon"></i>
             <span>新增字段</span>
           </button>
         </div>
       </div>
     </Popover>
+
+    <Menu ref="fieldMenu" :model="menuItems" :popup="true" />
   </div>
 </template>
 
@@ -97,12 +104,39 @@ const emit = defineEmits<{
   (e: 'createRecord', event: MouseEvent): void;
   (e: 'toggleFieldVisibility', field: Field): void;
   (e: 'openFieldCreate', event: MouseEvent): void;
+  (e: 'editField', field: Field): void;
+  (e: 'deleteField', field: Field): void;
 }>();
 
 const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void; visible: boolean } | null>(null);
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
+
+const fieldMenu = ref();
+const currentField = ref<Field | null>(null);
+const menuItems = [
+  {
+    label: '编辑',
+    icon: 'pi pi-pencil',
+    command: () => {
+      if (currentField.value) emit('editField', currentField.value);
+    }
+  },
+  {
+    label: '删除',
+    icon: 'pi pi-trash',
+    class: 'text-red-500',
+    command: () => {
+      if (currentField.value) emit('deleteField', currentField.value);
+    }
+  }
+];
+
+function toggleFieldMenu(event: Event, field: Field) {
+  currentField.value = field;
+  fieldMenu.value?.toggle(event);
+}
 
 function toggleRowHeightPopover(event: MouseEvent) {
   rowHeightPopover.value?.toggle(event);

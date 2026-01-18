@@ -57,3 +57,21 @@ export class UpdateFieldLayoutDto {
   @Type(() => UpdateFieldLayoutItemDto)
   fields!: UpdateFieldLayoutItemDto[];
 }
+
+export class UpdateFieldDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  name?: string;
+
+  @IsOptional()
+  @IsEnum(FieldType)
+  type?: FieldType;
+
+  @IsOptional()
+  options?: any;
+
+  @IsOptional()
+  @IsBoolean()
+  required?: boolean;
+}

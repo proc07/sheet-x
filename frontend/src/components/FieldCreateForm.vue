@@ -204,10 +204,11 @@ import type { Field } from '../stores/work';
 const props = defineProps<{
   initialName?: string;
   initialType?: Field['type'];
+  initialOptions?: any;
   tableId?: string;
 }>();
 
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['submit', 'cancel', 'update:type']);
 const work = useWorkStore();
 
 const localName = ref(props.initialName || '');
@@ -248,6 +249,57 @@ const lookupConfig = ref({
   filters: [] as { targetField: string, operator: string, currentField: string }[],
   calculationType: 'ORIGINAL',
   format: 'TEXT'
+});
+
+function initFromOptions() {
+  localName.value = props.initialName || '';
+  localType.value = props.initialType || 'TEXT';
+  
+  const opts = props.initialOptions || {};
+  defaultValue.value = opts.defaultValue ?? null;
+
+  // Initialize configs based on options
+  if (opts.options && Array.isArray(opts.options)) {
+      selectConfig.value.options = opts.options;
+  }
+  if (opts.useQuote !== undefined) selectConfig.value.useQuote = opts.useQuote;
+
+  if (opts.isMultiple !== undefined) userConfig.value.isMultiple = opts.isMultiple;
+  if (opts.showMoreInfo !== undefined) userConfig.value.showMoreInfo = opts.showMoreInfo;
+
+  if (opts.format) {
+      dateConfig.value.format = opts.format;
+      numberConfig.value.format = opts.format;
+      lookupConfig.value.format = opts.format; // Re-use format for lookup if applicable, though lookup usually has its own structure
+  }
+  
+  if (opts.expression) formulaConfig.value.expression = opts.expression;
+
+  if (opts.targetTableId) lookupConfig.value.targetTableId = opts.targetTableId;
+  if (opts.targetFieldId) lookupConfig.value.targetFieldId = opts.targetFieldId;
+  if (opts.filters) lookupConfig.value.filters = opts.filters;
+  if (opts.calculationType) lookupConfig.value.calculationType = opts.calculationType;
+}
+
+watch(() => props.initialName, () => {
+    initFromOptions();
+});
+// When initialType changes, we should also reset/init
+watch(() => props.initialType, (newVal) => {
+    // If we are switching types via edit, we want to load options.
+    // If we are just creating new, options might be empty.
+    if (newVal) localType.value = newVal;
+});
+watch(() => props.initialOptions, () => {
+    initFromOptions();
+}, { deep: true });
+
+onMounted(() => {
+    initFromOptions();
+});
+
+watch(localType, (newType) => {
+  emit('update:type', newType);
 });
 
 const calculationOptions = [
@@ -351,23 +403,23 @@ function handleSubmit() {
   switch (localType.value) {
     case 'SINGLE_SELECT':
     case 'MULTI_SELECT':
-        options = { ...selectConfig.value };
-        break;
+      options = { ...selectConfig.value };
+      break;
     case 'USER':
-        options = { ...userConfig.value };
-        break;
+      options = { ...userConfig.value };
+      break;
     case 'DATE':
-        options = { ...dateConfig.value };
-        break;
+      options = { ...dateConfig.value };
+      break;
     case 'NUMBER':
-        options = { ...numberConfig.value };
-        break;
+      options = { ...numberConfig.value };
+      break;
     case 'FORMULA':
-        options = { ...formulaConfig.value };
-        break;
+      options = { ...formulaConfig.value };
+      break;
     case 'LOOKUP':
-        options = { ...lookupConfig.value };
-        break;
+      options = { ...lookupConfig.value };
+      break;
   }
 
   // Add defaultValue

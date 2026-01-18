@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateFieldDto, UpdateFieldLayoutDto } from './dto';
+import { CreateFieldDto, UpdateFieldDto, UpdateFieldLayoutDto } from './dto';
 
 const DEFAULT_FIELD_WIDTH = 120;
 
@@ -43,6 +43,36 @@ export class FieldsService {
       where: { tableId },
       select: { id: true, name: true, type: true, required: true, options: true, position: true },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  private async assertFieldWrite(userId: string, fieldId: string) {
+    const field = await this.prisma.field.findUnique({
+      where: { id: fieldId },
+      select: { tableId: true },
+    });
+    if (!field) throw new BadRequestException('Field not found');
+    await this.assertTableWrite(userId, field.tableId);
+  }
+
+  async update(userId: string, id: string, dto: UpdateFieldDto) {
+    await this.assertFieldWrite(userId, id);
+    return this.prisma.field.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        type: dto.type,
+        options: dto.options ?? undefined,
+        required: dto.required,
+      },
+      select: { id: true, name: true, type: true, required: true, options: true, position: true },
+    });
+  }
+
+  async delete(userId: string, id: string) {
+    await this.assertFieldWrite(userId, id);
+    return this.prisma.field.delete({
+      where: { id },
     });
   }
 

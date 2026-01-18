@@ -136,6 +136,18 @@ export const useWorkStore = defineStore('work', {
       await this.loadFields(tableId);
       return data as Field;
     },
+    async updateField(tableId: string, fieldId: string, payload: Partial<Field>) {
+      const { data } = await api.patch(`/fields/${fieldId}`, payload);
+      const idx = this.fields.findIndex(field => field.id === fieldId);
+      if (idx >= 0) {
+        this.fields[idx] = { ...this.fields[idx], ...data };
+      }
+      return data as Field;
+    },
+    async deleteField(tableId: string, fieldId: string) {
+      await api.delete(`/fields/${fieldId}`);
+      this.fields = this.fields.filter(field => field.id !== fieldId);
+    },
     async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number; hidden?: boolean; statType?: string }>) {
       if (!tableId || fields.length === 0) return [];
       const { data } = await api.patch('/fields/layout', { tableId, fields });

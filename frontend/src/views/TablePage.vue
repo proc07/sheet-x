@@ -9,6 +9,8 @@
       @create-record="createRecord"
       @toggle-field-visibility="toggleFieldVisibility"
       @open-field-create="openFieldCreateFromConfig"
+      @edit-field="openFieldEdit"
+      @delete-field="handleDeleteField"
     />
 
     <div
@@ -194,9 +196,12 @@
         </template>
       </ContextMenu>
 
-      <Dialog v-model:visible="fieldCreateVisible" id="field-create-popover-form" :draggable="false" modal header="新增字段" class="min-w-[320px]">
+      <Dialog v-model:visible="fieldCreateVisible" :draggable="false" modal header="新增字段" class="min-w-[320px]">
         <FieldCreateForm 
           :tableId="resolvedTableId"
+          :initialName="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.name : ''"
+          :initialType="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.type : 'TEXT'"
+          :initialOptions="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.options : {}"
           @submit="handleFieldCreateSubmit"
           @cancel="closeFieldCreatePopover"
         />
@@ -221,6 +226,7 @@ import type { InputNumberInputEvent } from 'primevue/inputnumber';
 import type { MenuItem } from 'primevue/menuitem';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 import { api, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from '../components/CellEditor.vue';
@@ -240,6 +246,7 @@ const route = useRoute();
 const router = useRouter();
 const work = useWorkStore();
 const toast = useToast();
+const confirm = useConfirm();
 
 function getFieldTypeIcon(type: Field['type']) {
   return fieldTypeMeta[type]?.icon ?? 'pi-question';
@@ -248,24 +255,78 @@ function getFieldTypeIcon(type: Field['type']) {
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
 const fieldCreateVisible = ref(false);
+const fieldEditId = ref<string | null>(null);
+const fieldCreateDialogWidth = ref('320px');
 
-function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
+function handleFieldTypeChange(type: string) {
+  if (type === 'LOOKUP') {
+    fieldCreateDialogWidth.value = '560px';
+  } else {
+    fieldCreateDialogWidth.value = '320px';
+  }
+}
+
+async function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
   const tableId = resolvedTableId.value;
   if (!tableId) return;
-  work.createField(tableId, { 
-    name: payload.name, 
-    type: payload.type, 
-    options: payload.options 
-  });
+  
+  if (fieldEditId.value) {
+    try {
+      await work.updateField(tableId, fieldEditId.value, {
+        name: payload.name,
+        type: payload.type,
+        options: payload.options
+      });
+      toast.add({ severity: 'success', summary: '更新成功', life: 3000 });
+    } catch (e) {
+      toast.add({ severity: 'error', summary: '更新失败', life: 3000 });
+    }
+  } else {
+    await work.createField(tableId, { 
+      name: payload.name, 
+      type: payload.type, 
+      options: payload.options 
+    });
+  }
   closeFieldCreatePopover();
 }
 
 function toggleFieldCreatePopover(event: MouseEvent, anchor?: HTMLElement) {
+  fieldEditId.value = null;
+  fieldCreateDialogWidth.value = '320px';
   fieldCreateVisible.value = true;
 }
 
 function closeFieldCreatePopover() {
   fieldCreateVisible.value = false;
+}
+
+function openFieldEdit(field: Field) {
+    fieldEditId.value = field.id;
+    handleFieldTypeChange(field.type);
+    fieldCreateVisible.value = true;
+}
+
+function handleDeleteField(field: Field) {
+  confirm.require({
+    message: `确定要删除字段 "${field.name}" 吗？此操作不可恢复。`,
+    header: '删除确认',
+    icon: 'pi pi-exclamation-triangle',
+    rejectClass: 'p-button-secondary',
+    rejectLabel: '取消',
+    acceptClass: 'p-button-danger',
+    acceptLabel: '删除',
+    accept: async () => {
+      const tableId = resolvedTableId.value;
+      if (!tableId) return;
+      try {
+        await work.deleteField(tableId, field.id);
+        toast.add({ severity: 'success', summary: '删除成功', life: 3000 });
+      } catch (e) {
+        toast.add({ severity: 'error', summary: '删除失败', life: 3000 });
+      }
+    }
+  });
 }
 
 const fieldConfigContent = ref<HTMLElement | null>(null);
