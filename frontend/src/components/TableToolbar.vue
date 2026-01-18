@@ -45,7 +45,17 @@
             <div
               v-for="field in fields"
               :key="`config-${field.id}`"
-              class="flex items-center justify-between rounded-md gap-2 px-2 py-2 text-sm transition hover:bg-slate-100"
+              class="group flex items-center justify-between cursor-grab rounded-md gap-2 px-2 py-2 text-sm transition hover:bg-slate-100 border-b-2"
+              :class="{
+                'bg-black-50 border-black-500': dragOverField?.id === field.id,
+                'border-transparent': dragOverField?.id !== field.id
+              }"
+              draggable="true"
+              @dragstart="onDragStart($event, field)"
+              @dragover="onDragOver($event, field)"
+              @dragleave="onDragLeave"
+              @dragend="onDragEnd"
+              @drop="onDrop($event, field)"
             >
               <div class="flex items-center gap-2" :class="isFieldHidden(field) ? 'text-slate-400' : 'text-slate-700'">
                 <span v-if="getFieldMeta(field).text" class="field-type-text">{{ getFieldMeta(field).text }}</span>
@@ -106,12 +116,65 @@ const emit = defineEmits<{
   (e: 'openFieldCreate', event: MouseEvent): void;
   (e: 'editField', field: Field): void;
   (e: 'deleteField', field: Field): void;
+  (e: 'reorderFields', fields: Field[]): void;
 }>();
 
 const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void; visible: boolean } | null>(null);
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
+
+// Drag and Drop
+const draggingField = ref<Field | null>(null);
+const dragOverField = ref<Field | null>(null);
+
+function onDragStart(event: DragEvent, field: Field) {
+  draggingField.value = field;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.dropEffect = 'move';
+  }
+}
+
+function onDragOver(event: DragEvent, field: Field) {
+  event.preventDefault(); // Necessary to allow dropping
+  if (draggingField.value && draggingField.value.id !== field.id) {
+    dragOverField.value = field;
+  }
+}
+
+function onDragLeave(event: DragEvent) {
+  // Check if we really left the list item (not just entering a child)
+  // But simpler to just rely on drop or new dragover clearing it. 
+  // Actually, dragover fires continuously, so we set it there. 
+  // But we need to clear it if we leave the list area?
+  // Let's rely on `onDragEnd` to clear everything.
+}
+
+function onDragEnd() {
+  draggingField.value = null;
+  dragOverField.value = null;
+}
+
+function onDrop(event: DragEvent, targetField: Field) {
+  event.preventDefault();
+  dragOverField.value = null;
+  if (!draggingField.value || draggingField.value.id === targetField.id) return;
+
+  const currentFields = [...props.fields];
+  const fromIndex = currentFields.findIndex(f => f.id === draggingField.value?.id);
+  const toIndex = currentFields.findIndex(f => f.id === targetField.id);
+
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  // Move item
+  const [movedItem] = currentFields.splice(fromIndex, 1);
+  currentFields.splice(toIndex, 0, movedItem);
+
+  // Emit new order
+  emit('reorderFields', currentFields);
+  draggingField.value = null;
+}
 
 const fieldMenu = ref();
 const currentField = ref<Field | null>(null);

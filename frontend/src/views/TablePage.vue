@@ -11,6 +11,7 @@
       @open-field-create="openFieldCreateFromConfig"
       @edit-field="openFieldEdit"
       @delete-field="handleDeleteField"
+      @reorder-fields="handleReorderFields"
     />
 
     <div
@@ -329,6 +330,26 @@ function handleDeleteField(field: Field) {
   });
 }
 
+async function handleReorderFields(newFields: Field[]) {
+  const tableId = resolvedTableId.value;
+  if (!tableId) return;
+
+  // Optimistic update locally
+  work.fields = newFields;
+  
+  // We should re-assign position in local objects too to be consistent
+  newFields.forEach((f, i) => f.position = i);
+
+  try {
+    await work.updateFieldLayout(tableId, newFields.map((f, i) => ({ id: f.id, position: i })));
+  } catch (e) {
+    console.error('Failed to reorder fields', e);
+    toast.add({ severity: 'error', summary: '排序失败', life: 3000 });
+    // Revert? (requires reloading or keeping backup)
+    await work.loadFields(tableId);
+  }
+}
+
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
 
@@ -625,11 +646,13 @@ const onColReorder = async (_event: DataTableColumnReorderEvent) => {
   await nextTick();
   const orderIds = getFieldOrderFromDom();
   if (orderIds.length === 0) return;
+
   // Sync store order with UI order, then persist positions.
   const fieldMap = new Map(work.fields.map((field) => [field.id, field]));
   const orderedVisible = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
   const visibleCount = work.fields.filter((field) => !field.options?.hidden).length;
   if (orderedVisible.length !== visibleCount) return;
+
   const orderedFields: Field[] = [];
   let visibleIndex = 0;
   for (const field of work.fields) {
@@ -641,6 +664,7 @@ const onColReorder = async (_event: DataTableColumnReorderEvent) => {
     }
   }
   if (orderedFields.length !== work.fields.length) return;
+
   orderedFields.forEach((field, index) => {
     field.position = index;
   });
