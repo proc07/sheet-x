@@ -132,3 +132,32 @@ export const fieldTypeOptions = [
     FIELD_TYPE_UPDATED_TIME,
   ])
 ];
+
+export const dateFormatOptions = [
+  { label: '2026/01/30', value: 'YYYY/MM/DD' },
+  { label: '2026/01/30 14:00', value: 'YYYY/MM/DD HH:mm' },
+  { label: '2026/01/30 14:00 (GMT+8)', value: 'YYYY/MM/DD HH:mm (z)' },
+  { label: '2026-01-30', value: 'YYYY-MM-DD' },
+  { label: '2026-01-30 14:00', value: 'YYYY-MM-DD HH:mm' },
+  { label: '2026-01-30 14:00 (GMT+8)', value: 'YYYY-MM-DD HH:mm (z)' },
+  { label: '01-30', value: 'MM-DD' },
+  { label: '01/30/2026', value: 'MM/DD/YYYY' },
+  { label: '30/01/2026', value: 'DD/MM/YYYY' }
+];
+
+export const numberFormatOptions = [
+  { label: '整数', value: 'integer' },
+  { label: '千分位', value: 'thousands' },
+  { label: '千分位 (小数点)', value: 'thousands-decimal' },
+  { label: '保留 1 位小数', value: 'decimal-1' },
+  { label: '保留 2 位小数', value: 'decimal-2' },
+  { label: '保留 3 位小数', value: 'decimal-3' },
+  { label: '保留 4 位小数', value: 'decimal-4' },
+  { label: '保留 5 位小数', value: 'decimal-5' },
+  { label: '保留 6 位小数', value: 'decimal-6' },
+  { label: '保留 7 位小数', value: 'decimal-7' },
+  { label: '保留 8 位小数', value: 'decimal-8' },
+  { label: '保留 9 位小数', value: 'decimal-9' },
+  { label: '百分比', value: 'percent' },
+  { label: '百分比 (小数点)', value: 'percent-decimal' }
+];

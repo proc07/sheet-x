@@ -150,7 +150,7 @@
       </div>
 
       <!-- Text Default -->
-      <InputText v-if="localType === 'TEXT'" v-model="defaultValue" placeholder="请输入内容" class="w-full" size="small" />
+      <InputText v-if="localType === FIELD_TYPE_TEXT" v-model="defaultValue" placeholder="请输入内容" class="w-full" size="small" />
       
       <!-- Select Default -->
       <Dropdown v-else-if="localType === 'SINGLE_SELECT'" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" showClear />
@@ -199,6 +199,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { fieldTypeOptions, fieldTypeMeta } from '../constants/table';
 import { useWorkStore } from '../stores/work';
 import type { Field } from '../stores/work';
+import {FIELD_TYPE_TEXT, dateFormatOptions, numberFormatOptions} from '../constants/table'
 
 // Components might be auto-imported, but defining props
 const props = defineProps<{
@@ -212,7 +213,7 @@ const emit = defineEmits(['submit', 'cancel', 'update:type']);
 const work = useWorkStore();
 
 const localName = ref(props.initialName || '');
-const localType = ref<Field['type']>(props.initialType || 'TEXT');
+const localType = ref<Field['type']>(props.initialType || FIELD_TYPE_TEXT);
 const defaultValue = ref<any>(null);
 
 // Type Config State
@@ -248,12 +249,12 @@ const lookupConfig = ref({
   targetFieldId: '',
   filters: [] as { targetField: string, operator: string, currentField: string }[],
   calculationType: 'ORIGINAL',
-  format: 'TEXT'
+  format: FIELD_TYPE_TEXT
 });
 
 function initFromOptions() {
   localName.value = props.initialName || '';
-  localType.value = props.initialType || 'TEXT';
+  localType.value = props.initialType || FIELD_TYPE_TEXT;
   
   const opts = props.initialOptions || {};
   defaultValue.value = opts.defaultValue ?? null;
@@ -307,7 +308,7 @@ const calculationOptions = [
 ];
 
 const lookupFormatOptions = [
-  { label: 'A= 文本', value: 'TEXT' }
+  { label: 'A= 文本', value: FIELD_TYPE_TEXT }
 ];
 
 // Computed Helpers
@@ -324,34 +325,6 @@ const mockUsers = [
   { id: 'u3', name: '王五', avatar: 'https://primefaces.org/cdn/primevue/images/avatar/onyamalimba.png' }
 ];
 
-const dateFormatOptions = [
-  { label: '2026/01/30', value: 'YYYY/MM/DD' },
-  { label: '2026/01/30 14:00', value: 'YYYY/MM/DD HH:mm' },
-  { label: '2026/01/30 14:00 (GMT+8)', value: 'YYYY/MM/DD HH:mm (z)' },
-  { label: '2026-01-30', value: 'YYYY-MM-DD' },
-  { label: '2026-01-30 14:00', value: 'YYYY-MM-DD HH:mm' },
-  { label: '2026-01-30 14:00 (GMT+8)', value: 'YYYY-MM-DD HH:mm (z)' },
-  { label: '01-30', value: 'MM-DD' },
-  { label: '01/30/2026', value: 'MM/DD/YYYY' },
-  { label: '30/01/2026', value: 'DD/MM/YYYY' }
-];
-
-const numberFormatOptions = [
-  { label: '整数', value: 'integer' },
-  { label: '千分位', value: 'thousands' },
-  { label: '千分位 (小数点)', value: 'thousands-decimal' },
-  { label: '保留 1 位小数', value: 'decimal-1' },
-  { label: '保留 2 位小数', value: 'decimal-2' },
-  { label: '保留 3 位小数', value: 'decimal-3' },
-  { label: '保留 4 位小数', value: 'decimal-4' },
-  { label: '保留 5 位小数', value: 'decimal-5' },
-  { label: '保留 6 位小数', value: 'decimal-6' },
-  { label: '保留 7 位小数', value: 'decimal-7' },
-  { label: '保留 8 位小数', value: 'decimal-8' },
-  { label: '保留 9 位小数', value: 'decimal-9' },
-  { label: '百分比', value: 'percent' },
-  { label: '百分比 (小数点)', value: 'percent-decimal' }
-];
 
 const tables = computed(() => work.tables);
 const availableTargetFields = computed(() => {
