@@ -260,7 +260,7 @@ function initFromOptions() {
 
   // Initialize configs based on options
   if (opts.options && Array.isArray(opts.options)) {
-      selectConfig.value.options = opts.options;
+    selectConfig.value.options = opts.options;
   }
   if (opts.useQuote !== undefined) selectConfig.value.useQuote = opts.useQuote;
 
@@ -268,9 +268,9 @@ function initFromOptions() {
   if (opts.showMoreInfo !== undefined) userConfig.value.showMoreInfo = opts.showMoreInfo;
 
   if (opts.format) {
-      dateConfig.value.format = opts.format;
-      numberConfig.value.format = opts.format;
-      lookupConfig.value.format = opts.format; // Re-use format for lookup if applicable, though lookup usually has its own structure
+    dateConfig.value.format = opts.format;
+    numberConfig.value.format = opts.format;
+    lookupConfig.value.format = opts.format; // Re-use format for lookup if applicable, though lookup usually has its own structure
   }
   
   if (opts.expression) formulaConfig.value.expression = opts.expression;
@@ -282,20 +282,20 @@ function initFromOptions() {
 }
 
 watch(() => props.initialName, () => {
-    initFromOptions();
+  initFromOptions();
 });
 // When initialType changes, we should also reset/init
 watch(() => props.initialType, (newVal) => {
-    // If we are switching types via edit, we want to load options.
-    // If we are just creating new, options might be empty.
-    if (newVal) localType.value = newVal;
+  // If we are switching types via edit, we want to load options.
+  // If we are just creating new, options might be empty.
+  if (newVal) localType.value = newVal;
 });
 watch(() => props.initialOptions, () => {
-    initFromOptions();
+  initFromOptions();
 }, { deep: true });
 
 onMounted(() => {
-    initFromOptions();
+  initFromOptions();
 });
 
 watch(localType, (newType) => {

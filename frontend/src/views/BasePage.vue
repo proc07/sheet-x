@@ -19,7 +19,7 @@
                   role="tab"
                   :data-table-id="table.id"
                   :aria-selected="table.id === activeTableId"
-                  class="relative inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border border-transparent group"
+                  class="cursor-pointer relative inline-flex items-center gap-2 px-4 py-2 font-medium transition-colors border border-transparent group hover:border-slate-200/80 hover:border-b-0 hover:rounded-b-none"
                   :class="table.id === activeTableId
                     ? 'bg-white text-slate-900 border-slate-200/80 border-b-0 rounded-t-lg rounded-b-none shadow-sm z-10 after:absolute after:left-0 after:right-0 after:-bottom-px after:h-px after:bg-white'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-white/60 rounded-md'"
@@ -31,7 +31,7 @@
                       :ref="setEditingInputRef"
                       v-model="editingName"
                       type="text"
-                      class="h-5 w-32 rounded-md border border-slate-200/80 bg-white px-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none"
+                      class="h-5 w-35 rounded-md border border-slate-200/80 bg-white px-2 text-slate-700 focus:border-slate-400 focus:outline-none"
                       @click.stop
                       @keydown.enter.prevent="commitEditing"
                       @keydown.esc.prevent="cancelEditing"
@@ -86,7 +86,7 @@
         >
           <button
             type="button"
-            class="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800"
+            class="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-800"
             @click="toggleAllViewsPopover"
           >
             <span>全部视图</span>

@@ -1,6 +1,6 @@
 <template>
   <div class="overflow-hidden shrink-0">
-    <div class="flex flex-wrap items-center gap-2 py-2 text-sm">
+    <div class="flex flex-wrap items-center gap-2 py-2">
       <button
         v-for="action in toolbarActions"
         :key="action.label"

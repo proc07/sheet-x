@@ -257,15 +257,6 @@ const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as
 
 const fieldCreateVisible = ref(false);
 const fieldEditId = ref<string | null>(null);
-const fieldCreateDialogWidth = ref('320px');
-
-function handleFieldTypeChange(type: string) {
-  if (type === 'LOOKUP') {
-    fieldCreateDialogWidth.value = '560px';
-  } else {
-    fieldCreateDialogWidth.value = '320px';
-  }
-}
 
 async function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
   const tableId = resolvedTableId.value;
@@ -294,7 +285,6 @@ async function handleFieldCreateSubmit(payload: { name: string; type: Field['typ
 
 function toggleFieldCreatePopover(event: MouseEvent, anchor?: HTMLElement) {
   fieldEditId.value = null;
-  fieldCreateDialogWidth.value = '320px';
   fieldCreateVisible.value = true;
 }
 
@@ -304,7 +294,6 @@ function closeFieldCreatePopover() {
 
 function openFieldEdit(field: Field) {
     fieldEditId.value = field.id;
-    handleFieldTypeChange(field.type);
     fieldCreateVisible.value = true;
 }
 
@@ -478,7 +467,7 @@ const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions
 const virtualScrollerOptions = computed(() => ({
   itemSize: ROW_PADDING + rowHeight.value * HEIGHT_PER_ROW,
   delay: 0,
-  numToleratedItems: 10,
+  numToleratedItems: 20,
 }));
 const hasHorizontalScroll = ref(false);
 
