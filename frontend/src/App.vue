@@ -8,15 +8,15 @@
       >
         <div class="relative mb-5 flex items-start justify-between gap-2 slide-in">
           <div class="flex items-start gap-3">
-            <div class="h-9 w-9 rounded-lg bg-slate-900 dark:bg-amber-50 text-white dark:text-black flex items-center justify-center text-sm font-semibold">
+            <div class="h-9 w-9 rounded-lg bg-slate-900 dark:bg-amber-50 text-white dark:text-black flex items-center justify-center font-semibold">
               SX
             </div>
             <div v-if="!sidebarCollapsed" class="min-w-0">
-              <div class="text-sm font-semibold dark:text-slate-200">Sheet-X 维表格系统</div>
+              <div class="font-semibold dark:text-slate-200">Sheet-X 维表格系统</div>
               <div class="relative">
                 <button
                   type="button"
-                  class="group mt-1 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  class="group mt-1 flex items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   @click="toggleWorkspaceMenu"
                 >
                   <span class="max-w-37.5 truncate">{{ currentWorkspaceLabel }} 工作空间</span>

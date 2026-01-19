@@ -2,6 +2,7 @@ import type { Field } from '../stores/work';
 
 export const DEFAULT_FIELD_WIDTH = 120;
 export const HEIGHT_PER_ROW = 21;
+export const ROW_PADDING = 11.5
 
 // Field Types
 export const FIELD_TYPE_TEXT = 'TEXT';

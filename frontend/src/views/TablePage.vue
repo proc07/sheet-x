@@ -4,7 +4,6 @@
       :fields="work.fields"
       :row-height="rowHeight"
       :loading="loading"
-      :is-field-create-open="fieldCreateVisible"
       @update:row-height="selectRowHeight"
       @create-record="createRecord"
       @toggle-field-visibility="toggleFieldVisibility"
@@ -198,11 +197,11 @@
       </ContextMenu>
 
       <Dialog v-model:visible="fieldCreateVisible" :draggable="false" modal header="新增字段" class="min-w-[320px]">
-        <FieldCreateForm 
+        <FieldCreateForm
           :tableId="resolvedTableId"
-          :initialName="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.name : ''"
-          :initialType="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.type : 'TEXT'"
-          :initialOptions="fieldEditId ? work.fields.find(f => f.id === fieldEditId)?.options : {}"
+          :initialName="currentEditField?.name"
+          :initialType="currentEditField?.type"
+          :initialOptions="currentEditField?.options"
           @submit="handleFieldCreateSubmit"
           @cancel="closeFieldCreatePopover"
         />
@@ -232,8 +231,9 @@ import { api, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from '../components/CellEditor.vue';
 import TableToolbar from '../components/TableToolbar.vue';
-import { 
-  DEFAULT_FIELD_WIDTH, 
+import {
+  ROW_PADDING,
+  DEFAULT_FIELD_WIDTH,
   HEIGHT_PER_ROW, 
   rowHeightOptions, 
   statOptions, 
@@ -257,6 +257,10 @@ const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as
 
 const fieldCreateVisible = ref(false);
 const fieldEditId = ref<string | null>(null);
+const currentEditField = computed(() => {
+  if (!fieldEditId.value) return null;
+  return work.fields.find((f) => f.id === fieldEditId.value);
+});
 
 async function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
   const tableId = resolvedTableId.value;
@@ -293,8 +297,8 @@ function closeFieldCreatePopover() {
 }
 
 function openFieldEdit(field: Field) {
-    fieldEditId.value = field.id;
-    fieldCreateVisible.value = true;
+  fieldEditId.value = field.id;
+  fieldCreateVisible.value = true;
 }
 
 function handleDeleteField(field: Field) {
@@ -462,7 +466,6 @@ watch(() => work.fields, async (fields) => {
   }
 }, { immediate: true, deep: true });
 
-const ROW_PADDING = 11.5
 const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions[0].value);
 const virtualScrollerOptions = computed(() => ({
   itemSize: ROW_PADDING + rowHeight.value * HEIGHT_PER_ROW,

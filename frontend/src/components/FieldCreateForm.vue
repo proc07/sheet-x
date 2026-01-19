@@ -68,7 +68,7 @@
     </div>
 
     <!-- 2. User Config -->
-    <div v-if="localType === 'USER'" class="space-y-3 border-t border-b border-slate-100 py-2">
+    <div v-if="localType === FIELD_TYPE_USER" class="space-y-3 border-t border-b border-slate-100 py-2">
       <div class="flex items-center justify-between">
         <span class="text-sm text-slate-600">允许添加多个成员</span>
         <ToggleSwitch v-model="userConfig.isMultiple" size="small" />
@@ -83,19 +83,19 @@
     </div>
 
     <!-- 3. Date Config -->
-    <div v-if="localType === 'DATE'" class="space-y-2 border-t border-b border-slate-100 py-2">
+    <div v-if="localType === FIELD_TYPE_DATE" class="space-y-2 border-t border-b border-slate-100 py-2">
         <div class="text-sm text-slate-500">日期格式</div>
         <Dropdown v-model="dateConfig.format" :options="dateFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
     </div>
 
     <!-- 5. Number Config -->
-    <div v-if="localType === 'NUMBER'" class="space-y-2 border-t border-b border-slate-100 py-2">
+    <div v-if="localType === FIELD_TYPE_NUMBER" class="space-y-2 border-t border-b border-slate-100 py-2">
         <div class="text-sm text-slate-500">数字格式</div>
         <Dropdown v-model="numberConfig.format" :options="numberFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
     </div>
 
     <!-- 8. Formula Config -->
-    <div v-if="localType === 'FORMULA'" class="space-y-2 border-t border-b border-slate-100 py-2">
+    <div v-if="localType === FIELD_TYPE_FORMULA" class="space-y-2 border-t border-b border-slate-100 py-2">
       <div class="text-sm text-slate-500">公式内容</div>
       <Textarea v-model="formulaConfig.expression" rows="3" class="w-full text-xs font-mono" placeholder="输入公式，如: {FieldA} + {FieldB}" />
       <div class="flex gap-2">
@@ -105,7 +105,7 @@
     </div>
 
     <!-- 9. Lookup Config -->
-    <div v-if="localType === 'LOOKUP'" class="space-y-3 border-t border-b border-slate-100 py-3">
+    <div v-if="localType === FIELD_TYPE_LOOKUP" class="space-y-3 border-t border-b border-slate-100 py-3">
       <!-- Reference Field -->
       <div class="space-y-1">
         <div class="text-sm text-slate-500">需要引用的字段</div>
@@ -153,13 +153,13 @@
       <InputText v-if="localType === FIELD_TYPE_TEXT" v-model="defaultValue" placeholder="请输入内容" class="w-full" size="small" />
       
       <!-- Select Default -->
-      <Dropdown v-else-if="localType === 'SINGLE_SELECT'" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" showClear />
+      <Dropdown v-else-if="localType === FIELD_TYPE_SINGLE_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" showClear />
       
-      <MultiSelect v-else-if="localType === 'MULTI_SELECT'" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" display="chip" />
+      <MultiSelect v-else-if="localType === FIELD_TYPE_MULTI_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" display="chip" />
 
       <!-- User Default -->
       <component 
-        v-else-if="localType === 'USER'"
+        v-else-if="localType === FIELD_TYPE_USER"
         :is="userConfig.isMultiple ? 'MultiSelect' : 'Dropdown'"
         v-model="defaultValue"
         :options="mockUsers"
@@ -180,10 +180,10 @@
       </component>
 
       <!-- Date Default -->
-      <DatePicker v-else-if="localType === 'DATE'" v-model="defaultValue" :showTime="dateConfig.format.includes('HH')" showIcon fluid iconDisplay="input" size="small" appendTo="body" />
+      <DatePicker v-else-if="localType === FIELD_TYPE_DATE" v-model="defaultValue" :showTime="dateConfig.format.includes('HH')" showIcon fluid iconDisplay="input" size="small" appendTo="body" />
 
       <!-- Number Default -->
-      <InputNumber v-else-if="localType === 'NUMBER'" v-model="defaultValue" class="w-full" size="small" :minFractionDigits="getNumberFraction(numberConfig.format)" />
+      <InputNumber v-else-if="localType === FIELD_TYPE_NUMBER" v-model="defaultValue" class="w-full" size="small" :minFractionDigits="getNumberFraction(numberConfig.format)" />
     </div>
 
     <!-- Buttons -->
@@ -199,12 +199,29 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { fieldTypeOptions, fieldTypeMeta } from '../constants/table';
 import { useWorkStore } from '../stores/work';
 import type { Field } from '../stores/work';
-import {FIELD_TYPE_TEXT, dateFormatOptions, numberFormatOptions} from '../constants/table'
+import {
+  FIELD_TYPE_TEXT,
+  FIELD_TYPE_NUMBER,
+  FIELD_TYPE_DATE,
+  FIELD_TYPE_SINGLE_SELECT,
+  FIELD_TYPE_MULTI_SELECT,
+  FIELD_TYPE_USER,
+  FIELD_TYPE_GROUP,
+  FIELD_TYPE_ATTACHMENT,
+  FIELD_TYPE_CHECKBOX,
+  FIELD_TYPE_URL,
+  FIELD_TYPE_FORMULA,
+  FIELD_TYPE_LOOKUP,
+  FIELD_TYPE_WORKFLOW,
+  FIELD_TYPE_BUTTON,
+  dateFormatOptions,
+  numberFormatOptions
+} from '../constants/table';
 
 // Components might be auto-imported, but defining props
 const props = defineProps<{
   initialName?: string;
-  initialType?: Field['type'];
+  initialType?: string;
   initialOptions?: any;
   tableId?: string;
 }>();
@@ -213,7 +230,7 @@ const emit = defineEmits(['submit', 'cancel', 'update:type']);
 const work = useWorkStore();
 
 const localName = ref(props.initialName || '');
-const localType = ref<Field['type']>(props.initialType || FIELD_TYPE_TEXT);
+const localType = ref<Field['type']>(props.initialType as Field['type'] || FIELD_TYPE_TEXT);
 const defaultValue = ref<any>(null);
 
 // Type Config State
@@ -254,9 +271,10 @@ const lookupConfig = ref({
 
 function initFromOptions() {
   localName.value = props.initialName || '';
-  localType.value = props.initialType || FIELD_TYPE_TEXT;
+  localType.value = (props.initialType as Field['type']) || FIELD_TYPE_TEXT;
   
   const opts = props.initialOptions || {};
+  console.log('opts', opts)
   defaultValue.value = opts.defaultValue ?? null;
 
   // Initialize configs based on options
@@ -280,6 +298,19 @@ function initFromOptions() {
   if (opts.targetFieldId) lookupConfig.value.targetFieldId = opts.targetFieldId;
   if (opts.filters) lookupConfig.value.filters = opts.filters;
   if (opts.calculationType) lookupConfig.value.calculationType = opts.calculationType;
+
+  // Safe guard for defaultValue type mismatch
+  if (localType.value === FIELD_TYPE_NUMBER && typeof defaultValue.value === 'string') {
+    const num = Number(defaultValue.value);
+    defaultValue.value = Number.isFinite(num) ? num : null;
+  } else if (localType.value === FIELD_TYPE_DATE && typeof defaultValue.value === 'string') {
+    const d = new Date(defaultValue.value);
+    if (!isNaN(d.getTime())) {
+      defaultValue.value = d;
+    } else {
+      defaultValue.value = null;
+    }
+  }
 }
 
 watch(() => props.initialName, () => {
@@ -289,7 +320,7 @@ watch(() => props.initialName, () => {
 watch(() => props.initialType, (newVal) => {
   // If we are switching types via edit, we want to load options.
   // If we are just creating new, options might be empty.
-  if (newVal) localType.value = newVal;
+  if (newVal) localType.value = newVal as Field['type'];
 });
 watch(() => props.initialOptions, () => {
   initFromOptions();
@@ -312,10 +343,10 @@ const lookupFormatOptions = [
 ];
 
 // Computed Helpers
-const isSelectType = computed(() => ['SINGLE_SELECT', 'MULTI_SELECT'].includes(localType.value));
+const isSelectType = computed(() => [FIELD_TYPE_SINGLE_SELECT, FIELD_TYPE_MULTI_SELECT].includes(localType.value));
 
 const showDefaultValue = computed(() => {
-  return !['ATTACHMENT', 'CHECKBOX', 'URL', 'FORMULA', 'LOOKUP', 'BUTTON', 'WORKFLOW'].includes(localType.value);
+  return ![FIELD_TYPE_ATTACHMENT, FIELD_TYPE_CHECKBOX, FIELD_TYPE_URL, FIELD_TYPE_FORMULA, FIELD_TYPE_LOOKUP, FIELD_TYPE_BUTTON, FIELD_TYPE_WORKFLOW].includes(localType.value);
 });
 
 // Mock Data
@@ -374,23 +405,23 @@ function handleSubmit() {
   let options: any = {};
 
   switch (localType.value) {
-    case 'SINGLE_SELECT':
-    case 'MULTI_SELECT':
+    case FIELD_TYPE_SINGLE_SELECT:
+    case FIELD_TYPE_MULTI_SELECT:
       options = { ...selectConfig.value };
       break;
-    case 'USER':
+    case FIELD_TYPE_USER:
       options = { ...userConfig.value };
       break;
-    case 'DATE':
+    case FIELD_TYPE_DATE:
       options = { ...dateConfig.value };
       break;
-    case 'NUMBER':
+    case FIELD_TYPE_NUMBER:
       options = { ...numberConfig.value };
       break;
-    case 'FORMULA':
+    case FIELD_TYPE_FORMULA:
       options = { ...formulaConfig.value };
       break;
-    case 'LOOKUP':
+    case FIELD_TYPE_LOOKUP:
       options = { ...lookupConfig.value };
       break;
   }

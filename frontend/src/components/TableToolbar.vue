@@ -53,7 +53,6 @@
               draggable="true"
               @dragstart="onDragStart($event, field)"
               @dragover="onDragOver($event, field)"
-              @dragleave="onDragLeave"
               @dragend="onDragEnd"
               @drop="onDrop($event, field)"
             >
@@ -106,7 +105,6 @@ const props = defineProps<{
   fields: Field[];
   rowHeight: number;
   loading: boolean;
-  isFieldCreateOpen?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -135,27 +133,16 @@ function onDragStart(event: DragEvent, field: Field) {
     event.dataTransfer.dropEffect = 'move';
   }
 }
-
 function onDragOver(event: DragEvent, field: Field) {
   event.preventDefault(); // Necessary to allow dropping
   if (draggingField.value && draggingField.value.id !== field.id) {
     dragOverField.value = field;
   }
 }
-
-function onDragLeave(event: DragEvent) {
-  // Check if we really left the list item (not just entering a child)
-  // But simpler to just rely on drop or new dragover clearing it. 
-  // Actually, dragover fires continuously, so we set it there. 
-  // But we need to clear it if we leave the list area?
-  // Let's rely on `onDragEnd` to clear everything.
-}
-
 function onDragEnd() {
   draggingField.value = null;
   dragOverField.value = null;
 }
-
 function onDrop(event: DragEvent, targetField: Field) {
   event.preventDefault();
   dragOverField.value = null;
@@ -198,6 +185,10 @@ const menuItems = [
 
 function toggleFieldMenu(event: Event, field: Field) {
   currentField.value = field;
+  const oldVisible = fieldMenu.value.overlayVisible;
+  if (oldVisible === false) {
+    // next value will be true
+  }
   fieldMenu.value?.toggle(event);
 }
 
@@ -213,29 +204,25 @@ function selectRowHeight(value: number) {
 function handleFieldConfigOutsideClick(event: Event) {
   const popover = fieldConfigContent.value;
   if (!popover) return;
-
   const target = event.target as HTMLElement;
   // If click is inside the popover, ignore
   if (popover.contains(target)) return;
 
-  // If field create modal is open, ignore outside clicks
-  if (props.isFieldCreateOpen) return;
-
   // Otherwise, close
   fieldConfigPopover.value?.hide();
-  document.removeEventListener('click', handleFieldConfigOutsideClick, true);
+  document.querySelector('#app')?.removeEventListener('click', handleFieldConfigOutsideClick, true);
 }
 
 function toggleFieldConfigPopover(event: MouseEvent) {
   // visible property exists
   if (fieldConfigPopover.value?.visible) {
     fieldConfigPopover.value?.hide();
-    document.removeEventListener('click', handleFieldConfigOutsideClick, true);
+    document.querySelector('#app')?.removeEventListener('click', handleFieldConfigOutsideClick, true);
   } else {
     fieldConfigPopover.value?.toggle(event);
     nextTick(updateFieldConfigMaxHeight);
     setTimeout(() => {
-        document.addEventListener('click', handleFieldConfigOutsideClick, true);
+      document.querySelector('#app')?.addEventListener('click', handleFieldConfigOutsideClick, true);
     }, 0);
   }
 }
