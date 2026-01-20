@@ -9,7 +9,7 @@
     <!-- Type -->
     <div class="space-y-2">
       <div class="text-sm text-slate-500">字段类型</div>
-      <Dropdown
+      <Select
         v-model="localType"
         :options="fieldTypeOptions"
         optionLabel="label"
@@ -42,7 +42,7 @@
             {{ slotProps.placeholder }}
           </span>
         </template>
-      </Dropdown>
+      </Select>
     </div>
 
     <!-- Configuration Areas based on Type -->
@@ -58,10 +58,10 @@
       </div>
 
       <div class="space-y-1 max-h-40 overflow-y-auto bg-slate-50 rounded-md px-3 py-3">
-        <div v-for="(opt, index) in selectConfig.options" :key="index" class="flex items-center gap-1 group">
+        <div v-for="opt in selectConfig.options" :key="opt.id" class="flex items-center gap-1 group">
           <div class="mr-2 cursor-move text-slate-300 hover:text-slate-500"><i class="pi pi-bars text-xs"></i></div>
           <InputText v-model="opt.name"  size="small" class="flex-1 h-7 border-none shadow-none focus:ring-0 px-1" placeholder="请输入选项名" />
-          <Button icon="pi pi-times" text rounded size="small" class="w-6 h-6 !text-slate-300" @click="removeOption(index)" />
+          <Button icon="pi pi-times" text rounded size="small" class="w-6 h-6 !text-slate-300" @click="removeOption(opt.id)" />
         </div>
         <Button label="添加选项" icon="pi pi-plus" text size="small" class="w-full justify-start px-1 !text-blue-500" @click="addOption" />
       </div>
@@ -85,13 +85,13 @@
     <!-- 3. Date Config -->
     <div v-if="localType === FIELD_TYPE_DATE" class="space-y-2 border-t border-b border-slate-100 py-2">
         <div class="text-sm text-slate-500">日期格式</div>
-        <Dropdown v-model="dateConfig.format" :options="dateFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
+        <Select v-model="dateConfig.format" :options="dateFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
     </div>
 
     <!-- 5. Number Config -->
     <div v-if="localType === FIELD_TYPE_NUMBER" class="space-y-2 border-t border-b border-slate-100 py-2">
         <div class="text-sm text-slate-500">数字格式</div>
-        <Dropdown v-model="numberConfig.format" :options="numberFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
+        <Select v-model="numberConfig.format" :options="numberFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
     </div>
 
     <!-- 8. Formula Config -->
@@ -110,19 +110,19 @@
       <div class="space-y-1">
         <div class="text-sm text-slate-500">需要引用的字段</div>
         <div class="flex gap-2">
-          <Dropdown v-model="lookupConfig.targetTableId" :options="tables" optionLabel="name" optionValue="id" placeholder="引用字段所在的数据表" class="flex-1" size="small" appendTo="body" @change="lookupConfig.targetFieldId = ''" />
-          <Dropdown v-model="lookupConfig.targetFieldId" :options="availableTargetFields" optionLabel="name" optionValue="id" placeholder="选择引用字段" class="flex-1" size="small" appendTo="body" :disabled="!lookupConfig.targetTableId" />
+          <Select v-model="lookupConfig.targetTableId" :options="tables" optionLabel="name" optionValue="id" placeholder="引用字段所在的数据表" class="flex-1" size="small" appendTo="body" @change="lookupConfig.targetFieldId = ''" />
+          <Select v-model="lookupConfig.targetFieldId" :options="availableTargetFields" optionLabel="name" optionValue="id" placeholder="选择引用字段" class="flex-1" size="small" appendTo="body" :disabled="!lookupConfig.targetTableId" />
         </div>
       </div>
       <!-- Filters -->
       <div class="space-y-1">
         <div class="text-sm text-slate-500">查找条件</div>
         <div v-for="(filter, idx) in lookupConfig.filters" :key="idx" class="flex items-center gap-2 mb-2">
-          <Dropdown v-model="filter.targetField" :options="availableTargetFields" optionLabel="name" optionValue="id" class="flex-[1.5]" size="small" appendTo="body" placeholder="引用表中的字段" />
+          <Select v-model="filter.targetField" :options="availableTargetFields" optionLabel="name" optionValue="id" class="flex-[1.5]" size="small" appendTo="body" placeholder="引用表中的字段" />
           <div class="flex-1 min-w-[60px]">
-            <Dropdown v-model="filter.operator" :options="[{label:'等于', value:'='}]" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
+            <Select v-model="filter.operator" :options="[{label:'等于', value:'='}]" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
           </div>
-          <Dropdown v-model="filter.currentField" :options="currentTableFields" optionLabel="name" optionValue="id" class="flex-[1.5]" size="small" appendTo="body" placeholder="当前表中的字段" />
+          <Select v-model="filter.currentField" :options="currentTableFields" optionLabel="name" optionValue="id" class="flex-[1.5]" size="small" appendTo="body" placeholder="当前表中的字段" />
           <i class="pi pi-trash text-slate-400 hover:text-red-500 cursor-pointer" @click="lookupConfig.filters.splice(idx, 1)"></i>
         </div>
         <div class="flex">
@@ -133,11 +133,11 @@
       <div class="grid grid-cols-2 gap-2">
         <div class="space-y-1">
           <div class="text-sm text-slate-500">计算方式</div>
-          <Dropdown v-model="lookupConfig.calculationType" :options="calculationOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
+          <Select v-model="lookupConfig.calculationType" :options="calculationOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
         </div>
         <div class="space-y-1">
           <div class="text-sm text-slate-500">字段格式</div>
-          <Dropdown v-model="lookupConfig.format" :options="lookupFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
+          <Select v-model="lookupConfig.format" :options="lookupFormatOptions" optionLabel="label" optionValue="value" class="w-full" size="small" appendTo="body" />
         </div>
       </div>
     </div>
@@ -153,14 +153,14 @@
       <InputText v-if="localType === FIELD_TYPE_TEXT" v-model="defaultValue" placeholder="请输入内容" class="w-full" size="small" />
       
       <!-- Select Default -->
-      <Dropdown v-else-if="localType === FIELD_TYPE_SINGLE_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" showClear />
+      <Select v-else-if="localType === FIELD_TYPE_SINGLE_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="id" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" showClear />
       
-      <MultiSelect v-else-if="localType === FIELD_TYPE_MULTI_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="name" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" display="chip" />
+      <MultiSelect v-else-if="localType === FIELD_TYPE_MULTI_SELECT" v-model="defaultValue" :options="selectConfig.options" optionLabel="name" optionValue="id" placeholder="请选择默认值" class="w-full" size="small" appendTo="body" display="chip" />
 
       <!-- User Default -->
       <component 
         v-else-if="localType === FIELD_TYPE_USER"
-        :is="userConfig.isMultiple ? 'MultiSelect' : 'Dropdown'"
+        :is="userConfig.isMultiple ? 'MultiSelect' : 'Select'"
         v-model="defaultValue"
         :options="mockUsers"
         optionLabel="name"
@@ -217,6 +217,7 @@ import {
   dateFormatOptions,
   numberFormatOptions
 } from '../constants/table';
+import { nanoid } from 'nanoid';
 
 // Components might be auto-imported, but defining props
 const props = defineProps<{
@@ -232,13 +233,13 @@ const work = useWorkStore();
 const localName = ref(props.initialName || '');
 const localType = ref<Field['type']>(props.initialType as Field['type'] || FIELD_TYPE_TEXT);
 const defaultValue = ref<any>(null);
-
+  
 // Type Config State
 const selectConfig = ref({
   useQuote: false,
   options: [
-    { name: '选项1' },
-    { name: '选项2' }
+    { id: nanoid(6), name: '选项1' },
+    { id: nanoid(6), name: '选项2' }
   ]
 });
 
@@ -386,11 +387,18 @@ function handleTypeChange() {
 }
 
 function addOption() {
-  selectConfig.value.options.push({ name: `选项${selectConfig.value.options.length + 1}` });
+  selectConfig.value.options.push({ id: nanoid(6), name: `新选项` });
 }
 
-function removeOption(index: number) {
-  selectConfig.value.options.splice(index, 1);
+function removeOption(id: string) {
+  selectConfig.value.options = selectConfig.value.options.filter(opt => opt.id !== id);
+  // Reset defaultValue if it's now invalid
+  if (Array.isArray(defaultValue.value) && defaultValue.value.includes(id)) {
+    defaultValue.value = defaultValue.value.filter((v: string) => v !== id);
+  }
+  if (typeof defaultValue.value === 'string' && defaultValue.value === id) {
+    defaultValue.value = null;
+  }
 }
 
 function getNumberFraction(format: string) {

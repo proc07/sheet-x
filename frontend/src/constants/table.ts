@@ -1,6 +1,6 @@
 import type { Field } from '../stores/work';
 
-export const DEFAULT_FIELD_WIDTH = 120;
+export const DEFAULT_FIELD_WIDTH = 160;
 export const HEIGHT_PER_ROW = 21;
 export const ROW_PADDING = 11.5
 
@@ -145,6 +145,36 @@ export const dateFormatOptions = [
   { label: '01/30/2026', value: 'MM/DD/YYYY' },
   { label: '30/01/2026', value: 'DD/MM/YYYY' }
 ];
+
+export function formatDate(value: any, field?: Field) {
+  if (!value) return '';
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    // Default format if no config
+    let format = field?.options?.dateFormat || 'YYYY-MM-DD HH:mm';
+    
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    
+    // Replace tokens
+    return format
+      .replace('YYYY', String(y))
+      .replace('MM', m)
+      .replace('DD', d)
+      .replace('HH', h)
+      .replace('mm', min)
+      .replace('ss', s)
+      .replace('(z)', '');
+  } catch (e) {
+    return value;
+  }
+}
 
 export const numberFormatOptions = [
   { label: '整数', value: 'integer' },

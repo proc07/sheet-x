@@ -165,8 +165,8 @@ export const useWorkStore = defineStore('work', {
       const { data } = await api.get('/records', { params: { tableId } });
       this.records = data;
     },
-    async createRecord(tableId: string) {
-      const { data } = await api.post('/records', { tableId, data: {} });
+    async createRecord(tableId: string, initialData: Record<string, any> = {}) {
+      const { data } = await api.post('/records', { tableId, data: initialData });
       await this.loadRecords(tableId);
       return data as RecordRow;
     },

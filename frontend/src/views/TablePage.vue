@@ -88,18 +88,35 @@
             </div>
           </template>
           <template #body="{ data }">
-            <div class="w-full whitespace-normal overflow-hidden text-ellipsis" :class="`line-clamp-${rowHeight}`" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
-              {{ data.data?.[field.id] }}
+            <div class="w-full whitespace-normal text-ellipsis" :class="getCellClass(field, rowHeight)" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
+              <template v-if="field.type === FIELD_TYPE_SINGLE_SELECT && data.data?.[field.id]">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-xl bg-blue-100 text-blue-700 text-sm max-w-full truncate h-6 border border-blue-200">
+                  {{ getSelectOptionName(field, data.data?.[field.id]) }}
+                </span>
+              </template>
+              <template v-else-if="field.type === FIELD_TYPE_MULTI_SELECT && Array.isArray(data.data?.[field.id])">
+                <CellMultiSelectDisplay
+                  :value="data.data?.[field.id]"
+                  :field="field"
+                  :row-height="rowHeight"
+                />
+              </template>
+              <template v-else-if="field.type === FIELD_TYPE_DATE && data.data?.[field.id]">
+                {{ formatDate(data.data?.[field.id], field) }}
+              </template>
+              <template v-else>
+                <div v-tooltip.top="data.data?.[field.id]">
+                  {{ data.data?.[field.id] }}
+                </div>
+              </template>
             </div>
           </template>
           <template #editor="{ data }">
-            <div class="w-full whitespace-normal overflow-hidden text-ellipsis" :class="`line-clamp-${rowHeight}`" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
-              <CellEditor
-                :field="field"
-                :record="data"
-                @update="onUpdateCell"
-              />
-            </div>
+            <CellEditor
+              :field="field"
+              :record="data"
+              @update="onUpdateCell"
+            />
           </template>
         </Column>
         <Column 
@@ -234,12 +251,17 @@ import TableToolbar from '../components/TableToolbar.vue';
 import {
   ROW_PADDING,
   DEFAULT_FIELD_WIDTH,
-  HEIGHT_PER_ROW, 
-  rowHeightOptions, 
-  statOptions, 
+  HEIGHT_PER_ROW,
+  rowHeightOptions,
+  statOptions,
   fieldTypeMeta,
+  formatDate,
+  FIELD_TYPE_SINGLE_SELECT,
+  FIELD_TYPE_MULTI_SELECT,
+  FIELD_TYPE_DATE
 } from '../constants/table';
 import FieldCreateForm from '../components/FieldCreateForm.vue';
+import CellMultiSelectDisplay from '../components/CellMultiSelectDisplay.vue';
 
 const props = defineProps<{ tableId?: string }>();
 
@@ -686,6 +708,14 @@ const onRowReorder = (event: DataTableRowReorderEvent) => {
   work.records = event.value;
 };
 
+function getSelectOptionName(field: Field, value: string) {
+  const options = field.options?.options as Array<{ id: string; name: string }>;
+  if (!options) return value;
+  
+  const opt = options.find(o => o.id === value);
+  return opt ? opt.name : value;
+}
+
 const loading = ref(false);
 const tableWrap = ref<HTMLDivElement | null>(null);
 const tableHeight = ref('');
@@ -844,12 +874,30 @@ async function reload() {
   }
 }
 
+function getCellClass(field: Field, rowHeight: number) {
+  // MultiSelect handles its own overflow/clamping via CellMultiSelectDisplay component
+  if (field.type === FIELD_TYPE_MULTI_SELECT || field.type === FIELD_TYPE_SINGLE_SELECT) {
+    return "";
+  }
+  return `line-clamp-${rowHeight}`;
+}
+
 async function createRecord() {
   const tableId = resolvedTableId.value;
   if (!tableId) return;
-  await work.createRecord(tableId);
+  
+  const initialData: Record<string, any> = {};
+  work.fields.forEach(field => {
+    const val = field.options?.defaultValue;
+    if (val !== undefined && val !== null && val !== '') {
+      initialData[field.id] = val;
+    }
+  });
+
+  await work.createRecord(tableId, initialData);
 }
 
+// 待优化 单独对 filed 值更新，不要提交其他的值
 function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; value: any }) {
   const { recordId, fieldId, value } = payload;
   const record = work.records.find((item) => item.id === recordId);

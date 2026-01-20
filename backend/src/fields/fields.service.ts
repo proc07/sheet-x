@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFieldDto, UpdateFieldDto, UpdateFieldLayoutDto } from './dto';
 
-const DEFAULT_FIELD_WIDTH = 120;
+const DEFAULT_FIELD_WIDTH = 160;
 
 @Injectable()
 export class FieldsService {
