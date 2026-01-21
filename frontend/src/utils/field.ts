@@ -11,3 +11,11 @@ export function defaultOptionsForField(type: Field['type']) {
   }
   return undefined;
 }
+
+export function isSameTime(a: string | Date, b: string | Date) {
+  return new Date(a).getTime() === new Date(b).getTime();
+}
+
+export function normalizeRowHeight(value?: number) {
+  return value === 1 || value === 2 || value === 4 || value === 6 ? value : 1;
+}

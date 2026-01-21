@@ -88,7 +88,7 @@
             </div>
           </template>
           <template #body="{ data }">
-            <div class="w-full whitespace-normal text-ellipsis" :class="getCellClass(field, rowHeight)" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
+            <div class="datatable-body-cell w-full whitespace-normal text-ellipsis" :class="getCellClass(field, rowHeight)" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
               <template v-if="field.type === FIELD_TYPE_SINGLE_SELECT && data.data?.[field.id]">
                 <span class="inline-flex items-center px-1.5 py-0.5 rounded-xl bg-blue-100 text-blue-700 text-sm max-w-full truncate h-6 border border-blue-200">
                   {{ getSelectOptionName(field, data.data?.[field.id]) }}
@@ -112,6 +112,7 @@
             </div>
           </template>
           <template #editor="{ data }">
+            <!-- <div class="datatable-body-cell" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }"></div> -->
             <CellEditor
               :field="field"
               :record="data"
@@ -262,6 +263,7 @@ import {
 } from '../constants/table';
 import FieldCreateForm from '../components/FieldCreateForm.vue';
 import CellMultiSelectDisplay from '../components/CellMultiSelectDisplay.vue';
+import { normalizeRowHeight, isSameTime } from '../utils/field';
 
 const props = defineProps<{ tableId?: string }>();
 
@@ -495,10 +497,6 @@ const virtualScrollerOptions = computed(() => ({
   numToleratedItems: 20,
 }));
 const hasHorizontalScroll = ref(false);
-
-function normalizeRowHeight(value?: number) {
-  return value === 1 || value === 2 || value === 4 || value === 6 ? value : 1;
-}
 
 function updateHorizontalScroll() {
   const container = tableWrap.value?.querySelector('.p-datatable-table-container')?.childNodes?.[0] as HTMLElement | null;
@@ -897,9 +895,8 @@ async function createRecord() {
   await work.createRecord(tableId, initialData);
 }
 
-// 待优化 单独对 filed 值更新，不要提交其他的值
-function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; value: any }) {
-  const { recordId, fieldId, value } = payload;
+function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; type: string; value: any }) {
+  const { recordId, fieldId, type, value } = payload;
   const record = work.records.find((item) => item.id === recordId);
   if (!record) return;
   if (typeof value === 'string' && value.trim().length === 0) {
@@ -908,9 +905,14 @@ function onUpdateCell(payload: { recordId: string; revision: number; fieldId: st
   if (!record.data) {
     record.data = {};
   }
+
+  if (type === FIELD_TYPE_DATE && isSameTime(record.data[fieldId], value)) {
+    return;
+  }
   if (Object.is(record.data[fieldId], value)) {
     return;
   }
+
   record.data[fieldId] = value;
 
   queueRecordUpdate(recordId, async () => {
@@ -974,6 +976,14 @@ async function remove(recordId: string) {
 
 .field-config-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+:deep(.p-datatable-tbody > tr > td) {
+  position: relative;
+  /* padding: 0!important;
+  .datatable-body-cell{
+    padding: var(--p-datatable-body-cell-sm-padding);
+  } */
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {

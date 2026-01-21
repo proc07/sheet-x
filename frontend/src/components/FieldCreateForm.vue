@@ -46,7 +46,7 @@
     </div>
 
     <!-- Configuration Areas based on Type -->
-    
+
     <!-- 1. Single/Multi Select Options -->
     <div v-if="isSelectType" class="space-y-2 border-t border-b border-slate-100 py-3">
       <div class="flex items-center justify-between">

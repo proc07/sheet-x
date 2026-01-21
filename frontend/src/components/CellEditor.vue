@@ -3,29 +3,31 @@
     v-if="field.type === FIELD_TYPE_TEXT"
     v-model="local"
     size="small"
-    class="w-full h-full cell-textarea"
+    class="w-full h-full cell-textarea !absolute left-0 top-0 px-2"
     placeholder=""
   />
 
-  <InputText
+  <InputNumber
     v-else-if="field.type === FIELD_TYPE_NUMBER"
     v-model="local"
     size="small"
-    type="number"
-    class="w-full"
+    v-bind="numberFieldProps"
+    class="w-full h-full !absolute left-0 top-0 !rounded-none"
+    inputClass="w-full h-full !rounded-none border-none outline-none shadow-none"
     placeholder=""
+    @keydown.enter.prevent="commit"
   />
 
   <DatePicker
     v-else-if="field.type === FIELD_TYPE_DATE"
     v-model="local"
     size="small"
-    showIcon
     :dateFormat="calendarDateFormat"
     :showTime="calendarShowTime"
     hourFormat="24"
-    class="w-full h-full"
+    class="w-full h-full !absolute left-0 top-0"
     panelClass="cell-editor-overlay"
+    inputClass="w-full !rounded-none"
     @show="onOverlayShow"
   />
 
@@ -39,7 +41,7 @@
     :options="choices"
     optionLabel="name"
     optionValue="id"
-    class="w-full h-full"
+    class="w-full h-full !absolute left-0 top-0 !rounded-none"
     panelClass="cell-editor-overlay"
     @show="onOverlayShow"
   >
@@ -55,7 +57,7 @@
     :options="choices"
     optionLabel="name"
     optionValue="id"
-    class="w-full h-full"
+    class="w-full h-full !absolute left-0 top-0 !rounded-none"
     display="chip"
     panelClass="cell-editor-overlay"
     @show="onOverlayShow"
@@ -110,7 +112,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update', payload: { recordId: string; revision: number; fieldId: string; value: any }): void;
+  (e: 'update', payload: { recordId: string; revision: number; fieldId: string; type: string; value: any }): void;
 }>();
 
 const dropdownRef = ref();
@@ -148,6 +150,30 @@ const calendarShowTime = computed(() => {
   return fmt ? fmt.includes('HH:mm') : false;
 });
 
+const numberFieldProps = computed(() => {
+  const fmt = props.field.options?.format;
+  if (!fmt || fmt === 'integer') {
+    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: false };
+  }
+  if (fmt === 'thousands') {
+    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: true };
+  }
+  if (fmt === 'thousands-decimal') {
+    return { useGrouping: true };
+  }
+  if (fmt === 'percent') {
+    return { suffix: '%' }; // Note: PrimeVue might treat input 50 as 50%, not 0.5. Depends on implementation.
+  }
+  if (fmt === 'percent-decimal') {
+    return { suffix: '%', minFractionDigits: 2 }; 
+  }
+  if (fmt.startsWith('decimal-')) {
+    const digits = parseInt(fmt.split('-')[1], 10);
+    return { minFractionDigits: digits, maxFractionDigits: digits, useGrouping: false };
+  }
+  return {};
+});
+
 function normalizeLocalValue(value: any) {
   if (props.field.type === FIELD_TYPE_MULTI_SELECT) {
     return Array.isArray(value) ? value : [];
@@ -156,6 +182,12 @@ function normalizeLocalValue(value: any) {
     if (!value) return null;
     const parsed = value instanceof Date ? value : new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (props.field.type === FIELD_TYPE_NUMBER) {
+    // If it's a number, we might want to ensure it respects decimal places or other formats
+    // But usually for editing, we just return the raw number or string representation
+    if (value === null || value === undefined || value === '') return null;
+    return Number(value);
   }
   return value;
 }
@@ -180,7 +212,13 @@ function commit() {
     v = Number.isFinite(num) ? num : null;
   }
 
-  emit('update', { recordId: props.record.id, revision: props.record.revision, fieldId: fieldId.value, value: v });
+  emit('update', {
+    recordId: props.record.id,
+    revision: props.record.revision,
+    fieldId: fieldId.value,
+    type: props.field.type,
+    value: v
+  });
 }
 
 // Hack: When overlay is shown, attach stopPropagation listener to it
