@@ -7,6 +7,7 @@ import { TablesModule } from './tables/tables.module';
 import { FieldsModule } from './fields/fields.module';
 import { RecordsModule } from './records/records.module';
 import { ViewsModule } from './views/views.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ViewsModule } from './views/views.module';
     FieldsModule,
     RecordsModule,
     ViewsModule,
+    StorageModule,
   ],
 })
 export class AppModule {}

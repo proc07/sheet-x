@@ -18,6 +18,19 @@ function persistWorkspaceId(id: string) {
 export type Workspace = { id: string; name: string; createdAt: string };
 export type Base = { id: string; name: string; createdAt: string };
 export type Table = { id: string; name: string; createdAt: string; rowHeight?: number };
+export type Attachment = {
+  name: string;
+  type: string;
+  url: string;
+  size: number;
+  lastModified?: number;
+}
+
+export type UrlData = {
+  link: string;
+  text?: string;
+}
+
 export type Field = {
   id: string;
   name: string;

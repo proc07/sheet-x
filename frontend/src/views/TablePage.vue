@@ -88,64 +88,13 @@
             </div>
           </template>
           <template #body="{ data }">
-            <div class="datatable-body-cell w-full whitespace-normal text-ellipsis" :class="getCellClass(field, rowHeight)" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }">
-              <template v-if="field.type === FIELD_TYPE_SINGLE_SELECT && data.data?.[field.id]">
-                <span class="inline-flex items-center px-1.5 py-0.5 rounded-xl bg-blue-100 text-blue-700 text-sm max-w-full truncate h-6 border border-blue-200">
-                  {{ getSelectOptionName(field, data.data?.[field.id]) }}
-                </span>
-              </template>
-              <template v-else-if="field.type === FIELD_TYPE_MULTI_SELECT && Array.isArray(data.data?.[field.id])">
-                <CellMultiSelectDisplay
-                  :value="data.data?.[field.id]"
-                  :field="field"
-                  :row-height="rowHeight"
-                />
-              </template>
-              <template v-else-if="field.type === FIELD_TYPE_DATE && data.data?.[field.id]">
-                {{ formatDate(data.data?.[field.id], field) }}
-              </template>
-              <template v-else-if="field.type === FIELD_TYPE_CHECKBOX">
-                <div class="h-full flex items-center justify-center">
-                  <Checkbox :modelValue="!!data.data?.[field.id]" binary readonly />
-                </div>
-              </template>
-              <template v-else-if="field.type === FIELD_TYPE_URL && data.data?.[field.id]">
-                <a 
-                  :href="data.data?.[field.id]?.link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block w-full text-blue-600 hover:underline truncate px-1"
-                  v-tooltip.top="data.data?.[field.id]?.link"
-                  @click.stop
-                >
-                  {{ data.data?.[field.id]?.text || data.data?.[field.id]?.link }}
-                </a>
-              </template>
-              <template v-else-if="field.type === FIELD_TYPE_ATTACHMENT && Array.isArray(data.data?.[field.id])">
-                <div class="flex items-center gap-1 h-full overflow-hidden px-1">
-                  <div 
-                    v-for="(file, idx) in data.data[field.id]" 
-                    :key="idx"
-                    class="h-full flex-shrink-0 border rounded flex items-center justify-center bg-slate-50 cursor-pointer hover:border-blue-400 transition-colors"
-                    @mouseenter="(e) => showAttachmentPreview(e, file)"
-                    @mouseleave="hideAttachmentPreview"
-                    @click.stop
-                  >
-                    <img
-                      v-if="isImage(file)" 
-                      :src="file.url" 
-                      class="w-full h-full object-cover rounded pointer-events-none" 
-                    />
-                    <i v-else :class="['pi text-xs px-2', getFileIcon(file)]"></i>
-                  </div>
-                </div>
-              </template>
-              <template v-else>
-                <div v-tooltip.top="data.data?.[field.id]">
-                  {{ data.data?.[field.id] }}
-                </div>
-              </template>
-            </div>
+            <CellRenderer
+              :field="field"
+              :data="data"
+              :row-height="rowHeight"
+              @show-attachment-preview="showAttachmentPreview"
+              @hide-attachment-preview="hideAttachmentPreview"
+            />
           </template>
           <template #editor="{ data }">
             <!-- <div class="datatable-body-cell" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }"></div> -->
@@ -314,6 +263,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import { api, getBatchTableStats } from '../api';
 import { useWorkStore, type Field, type RecordRow } from '../stores/work';
 import CellEditor from '../components/CellEditor.vue';
+import CellRenderer from '../components/CellRenderer.vue';
 import TableToolbar from '../components/TableToolbar.vue';
 import {
   ROW_PADDING,
@@ -331,35 +281,15 @@ import {
   FIELD_TYPE_URL
 } from '../constants/table';
 import FieldCreateForm from '../components/FieldCreateForm.vue';
-import CellMultiSelectDisplay from '../components/CellMultiSelectDisplay.vue';
-import { normalizeRowHeight, isSameTime } from '../utils/field';
+import { normalizeRowHeight, isSameTime, getFieldTypeIcon, isImage, getFileIcon } from '../utils/field';
 import { Image } from 'primevue';
 
-
 const props = defineProps<{ tableId?: string }>();
-
 const route = useRoute();
 const router = useRouter();
 const work = useWorkStore();
 const toast = useToast();
 const confirm = useConfirm();
-
-function getFieldTypeIcon(type: Field['type']) {
-  return fieldTypeMeta[type]?.icon ?? 'pi-question';
-}
-
-function isImage(file: any) {
-  return file?.type?.startsWith('image/');
-}
-
-function getFileIcon(file: any) {
-  if (!file?.type) return 'pi-file text-gray-500';
-  if (file.type.includes('pdf')) return 'pi-file-pdf text-red-500';
-  if (file.type.includes('word') || file.type.includes('document')) return 'pi-file-word text-blue-500';
-  if (file.type.includes('excel') || file.type.includes('sheet')) return 'pi-file-excel text-green-500';
-  if (file.type.includes('zip') || file.type.includes('compressed')) return 'pi-box text-orange-500';
-  return 'pi-file text-gray-500';
-}
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
@@ -981,18 +911,17 @@ async function createRecord() {
 
 function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; type: string; value: any }) {
   const { recordId, fieldId, type, value } = payload;
+
   const record = work.records.find((item) => item.id === recordId);
   if (!record) return;
+
   if (typeof value === 'string' && value.trim().length === 0) {
     return;
   }
-  if (!record.data) {
-    record.data = {};
-  }
-
   if (type === FIELD_TYPE_DATE && isSameTime(record.data[fieldId], value)) {
     return;
   }
+  // todo: optimize
   if (Object.is(record.data[fieldId], value)) {
     return;
   }

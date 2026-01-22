@@ -95,8 +95,8 @@
     <div v-if="local && local.link" class="flex items-center gap-1 w-full overflow-hidden">
       <a 
         :href="local.link" 
-        target="_blank" 
-        class="text-blue-500 hover:text-blue-700 truncate flex-1"
+        target="_blank"
+        class="text-blue-500 hover:text-blue-700 truncate"
         @click.stop
       >
         {{ local.text || local.link }}
@@ -258,7 +258,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import type { Field, RecordRow } from '../stores/work';
+import type { Field, RecordRow, Attachment } from '../stores/work';
 import {
   FIELD_TYPE_TEXT,
   FIELD_TYPE_NUMBER,
@@ -278,6 +278,9 @@ import {
   numberFormatOptions,
   formatDate
 } from '../constants/table';
+import { uploadFile } from '../api';
+import { isImage, getFileIcon } from '../utils/field';
+import { downloadFile } from '../utils/download';
 
 const props = defineProps<{
   field: Field;
@@ -393,7 +396,7 @@ function normalizeLocalValue(value: any) {
     return !!value;
   }
   if (props.field.type === FIELD_TYPE_ATTACHMENT) {
-    return Array.isArray(value) ? value : [];
+    return Array.isArray(value) ? JSON.parse(JSON.stringify(value)) : [];
   }
   if (props.field.type === FIELD_TYPE_URL) {
     // Ensure URL data is always normalized to object format { text, link }
@@ -405,6 +408,7 @@ function normalizeLocalValue(value: any) {
     }
     return value;
   }
+
   return value;
 }
 
@@ -448,7 +452,7 @@ function openUrlEditor() {
   urlPopupStyle.value = {
     top: `${rect.bottom + 4}px`,
     left: `${rect.left}px`,
-  };  
+  };
 }
 
 function closeUrlEditor() {
@@ -471,7 +475,7 @@ function saveUrl() {
   }
 
   // Always save as object structure
-  local.value = { 
+  local.value = {
     link, 
     text: text || link // If text is empty, use link as text
   };
@@ -482,35 +486,6 @@ function saveUrl() {
 // --- Attachment Logic ---
 const isUploading = ref(false);
 const uploadError = ref('');
-
-interface Attachment {
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-  lastModified?: number;
-}
-
-function isImage(file: Attachment) {
-  return file.type.startsWith('image/');
-}
-
-function getFileIcon(file: Attachment) {
-  if (file.type.includes('pdf')) return 'pi-file-pdf text-red-500';
-  if (file.type.includes('word') || file.type.includes('document')) return 'pi-file-word text-blue-500';
-  if (file.type.includes('excel') || file.type.includes('sheet')) return 'pi-file-excel text-green-500';
-  if (file.type.includes('zip') || file.type.includes('compressed')) return 'pi-box text-orange-500';
-  return 'pi-file text-gray-500';
-}
-
-function downloadFile(file: Attachment) {
-  const a = document.createElement('a');
-  a.href = file.url;
-  a.download = file.name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
 
 function removeFile(index: number) {
   if (Array.isArray(local.value)) {
@@ -537,45 +512,35 @@ async function handleFileUpload(event: Event) {
         continue;
       }
       
-      // Mock Upload: Read file to DataURL
-      const url = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      // Simulate network delay
-      await new Promise<void>(r => setTimeout(() => r(), 500));
-
-      newFiles.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        url: url,
-        lastModified: file.lastModified
-      });
+      try {
+        const uploaded = await uploadFile(file);
+        newFiles.push({
+          name: uploaded.name,
+          type: uploaded.type,
+          size: uploaded.size,
+          url: uploaded.url,
+          lastModified: file.lastModified
+        });
+      } catch (err) {
+        console.error('File upload failed', err);
+        uploadError.value = `文件 ${file.name} 上传失败`;
+      }
     }
 
-    if (!Array.isArray(local.value)) {
-      local.value = [];
+    if (newFiles.length > 0) {
+      if (!Array.isArray(local.value)) {
+        local.value = [];
+      }
+      local.value.push(...newFiles);
     }
-    local.value.push(...newFiles);
   } catch (e) {
     console.error(e);
-    uploadError.value = '上传失败';
+    uploadError.value = '上传过程中发生错误';
   } finally {
     isUploading.value = false;
     input.value = ''; // Reset input
   }
 }
-
-watch(
-  () => props.record.data?.[fieldId.value],
-  (v) => {
-    local.value = normalizeLocalValue(v);
-  }
-);
 
 const choices = computed(() => props.field.options?.options ?? []);
 

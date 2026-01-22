@@ -13,6 +13,7 @@ declare module 'vue' {
     Card: typeof import('primevue/card')['default']
     CellEditor: typeof import('./src/components/CellEditor.vue')['default']
     CellMultiSelectDisplay: typeof import('./src/components/CellMultiSelectDisplay.vue')['default']
+    CellRenderer: typeof import('./src/components/CellRenderer.vue')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     Chip: typeof import('primevue/chip')['default']
     Column: typeof import('primevue/column')['default']
