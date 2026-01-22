@@ -104,6 +104,42 @@
               <template v-else-if="field.type === FIELD_TYPE_DATE && data.data?.[field.id]">
                 {{ formatDate(data.data?.[field.id], field) }}
               </template>
+              <template v-else-if="field.type === FIELD_TYPE_CHECKBOX">
+                <div class="h-full flex items-center justify-center">
+                  <Checkbox :modelValue="!!data.data?.[field.id]" binary readonly />
+                </div>
+              </template>
+              <template v-else-if="field.type === FIELD_TYPE_URL && data.data?.[field.id]">
+                <a 
+                  :href="data.data?.[field.id]?.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block w-full text-blue-600 hover:underline truncate px-1"
+                  v-tooltip.top="data.data?.[field.id]?.link"
+                  @click.stop
+                >
+                  {{ data.data?.[field.id]?.text || data.data?.[field.id]?.link }}
+                </a>
+              </template>
+              <template v-else-if="field.type === FIELD_TYPE_ATTACHMENT && Array.isArray(data.data?.[field.id])">
+                <div class="flex items-center gap-1 h-full overflow-hidden px-1">
+                  <div 
+                    v-for="(file, idx) in data.data[field.id]" 
+                    :key="idx"
+                    class="h-full flex-shrink-0 border rounded flex items-center justify-center bg-slate-50 cursor-pointer hover:border-blue-400 transition-colors"
+                    @mouseenter="(e) => showAttachmentPreview(e, file)"
+                    @mouseleave="hideAttachmentPreview"
+                    @click.stop
+                  >
+                    <img
+                      v-if="isImage(file)" 
+                      :src="file.url" 
+                      class="w-full h-full object-cover rounded pointer-events-none" 
+                    />
+                    <i v-else :class="['pi text-xs px-2', getFileIcon(file)]"></i>
+                  </div>
+                </div>
+              </template>
               <template v-else>
                 <div v-tooltip.top="data.data?.[field.id]">
                   {{ data.data?.[field.id] }}
@@ -175,6 +211,36 @@
             <span>{{ opt.label }}</span>
             <i v-if="fieldStats[currentStatFieldId!]?.type === opt.value" class="pi pi-check ml-auto text-blue-600 text-xs"></i>
           </button>
+        </div>
+      </Popover>
+
+      <!-- Attachment Preview Popover -->
+      <Popover ref="attachmentPreviewPopover" :dismissable="false">
+        <div 
+          class="bg-white p-2 rounded-lg max-w-[280px]"
+          @mouseenter="clearHideTimer"
+          @mouseleave="hideAttachmentPreview"
+        >
+          <div class="text-xs font-medium text-slate-700 mb-2 truncate px-1" :title="previewFile?.name">
+            {{ previewFile?.name }}
+          </div>
+          <div class="rounded overflow-hidden bg-slate-100 flex items-center justify-center min-h-[120px] relative group">
+            <Image 
+              v-if="previewFile && isImage(previewFile)" 
+              :src="previewFile.url" 
+              alt="Image" 
+              preview 
+              imageClass="max-w-full max-h-[200px] object-contain"
+              :pt="{
+                root: { class: 'flex justify-center' },
+                button: { class: 'hidden' } 
+              }"
+            />
+            <div v-else class="flex flex-col items-center gap-2 py-4">
+              <i :class="['pi text-4xl', previewFile ? getFileIcon(previewFile) : '']"></i>
+              <span class="text-xs text-slate-400">{{ previewFile?.type }}</span>
+            </div>
+          </div>
         </div>
       </Popover>
 
@@ -259,11 +325,16 @@ import {
   formatDate,
   FIELD_TYPE_SINGLE_SELECT,
   FIELD_TYPE_MULTI_SELECT,
-  FIELD_TYPE_DATE
+  FIELD_TYPE_DATE,
+  FIELD_TYPE_ATTACHMENT,
+  FIELD_TYPE_CHECKBOX,
+  FIELD_TYPE_URL
 } from '../constants/table';
 import FieldCreateForm from '../components/FieldCreateForm.vue';
 import CellMultiSelectDisplay from '../components/CellMultiSelectDisplay.vue';
 import { normalizeRowHeight, isSameTime } from '../utils/field';
+import { Image } from 'primevue';
+
 
 const props = defineProps<{ tableId?: string }>();
 
@@ -275,6 +346,19 @@ const confirm = useConfirm();
 
 function getFieldTypeIcon(type: Field['type']) {
   return fieldTypeMeta[type]?.icon ?? 'pi-question';
+}
+
+function isImage(file: any) {
+  return file?.type?.startsWith('image/');
+}
+
+function getFileIcon(file: any) {
+  if (!file?.type) return 'pi-file text-gray-500';
+  if (file.type.includes('pdf')) return 'pi-file-pdf text-red-500';
+  if (file.type.includes('word') || file.type.includes('document')) return 'pi-file-word text-blue-500';
+  if (file.type.includes('excel') || file.type.includes('sheet')) return 'pi-file-excel text-green-500';
+  if (file.type.includes('zip') || file.type.includes('compressed')) return 'pi-box text-orange-500';
+  return 'pi-file text-gray-500';
 }
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
@@ -929,6 +1013,29 @@ function onUpdateCell(payload: { recordId: string; revision: number; fieldId: st
       showUpdateErrorToast(e?.response?.data?.message ?? '更新失败');
     }
   });
+}
+
+const attachmentPreviewPopover = ref();
+const previewFile = ref<any>(null);
+const hideTimer = ref<number | null>(null);
+
+function showAttachmentPreview(event: Event, file: any) {
+  clearHideTimer();
+  previewFile.value = file;
+  attachmentPreviewPopover.value.show(event);
+}
+
+function hideAttachmentPreview() {
+  hideTimer.value = window.setTimeout(() => {
+    attachmentPreviewPopover.value.hide();
+  }, 100);
+}
+
+function clearHideTimer() {
+  if (hideTimer.value) {
+    clearTimeout(hideTimer.value);
+    hideTimer.value = null;
+  }
 }
 
 async function remove(recordId: string) {
