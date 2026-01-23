@@ -72,7 +72,6 @@ import {
   FIELD_TYPE_URL
 } from '../constants/table';
 import CellMultiSelectDisplay from './CellMultiSelectDisplay.vue';
-import { normalizeRowHeight, isSameTime } from '../utils/field';
 import { isImage, getFileIcon } from '../utils/field';
 
 const props = defineProps<{

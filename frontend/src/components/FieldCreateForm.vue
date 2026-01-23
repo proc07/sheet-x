@@ -275,7 +275,6 @@ function initFromOptions() {
   localType.value = (props.initialType as Field['type']) || FIELD_TYPE_TEXT;
   
   const opts = props.initialOptions || {};
-  console.log('opts', opts)
   defaultValue.value = opts.defaultValue ?? null;
 
   // Initialize configs based on options

@@ -43,7 +43,7 @@
         @select-all-change="onSelectAllChange"
         @row-contextmenu="onRowContextMenu"
         @column-resize-end="onColumnResizeEnd"
-        :value="work.records"        
+        :value="work.records"
         :reorderableColumns="true"
         @columnReorder="onColReorder"
         @rowReorder="onRowReorder"
@@ -68,8 +68,8 @@
           frozen
           headerClass="row-select-cell"
           bodyClass="row-select-cell"
-          :headerStyle="{ width: '40px', padding: '10px' }"
-          :bodyStyle="{ width: '40px', textAlign: 'center' }"
+          :headerStyle="{ width: '40px', padding: '10px', 'border-right': '1px solid var(--p-datatable-body-cell-border-color)' }"
+          :bodyStyle="{ textAlign: 'center', 'z-index': 2 }"
         ></Column>
         <Column
           v-for="field in visibleFields"
@@ -148,7 +148,7 @@
          </ColumnGroup>
        </DataTable>
  
-       <Popover ref="statPopover" @show="statPopoverVisible = true" @hide="statPopoverVisible = false">
+      <Popover ref="statPopover" @show="statPopoverVisible = true" @hide="statPopoverVisible = false">
          <div class="w-32 py-1">
           <button
             v-for="opt in statOptions"
@@ -182,7 +182,7 @@
               imageClass="max-w-full max-h-[200px] object-contain"
               :pt="{
                 root: { class: 'flex justify-center' },
-                button: { class: 'hidden' } 
+                button: { class: 'hidden' }
               }"
             />
             <div v-else class="flex flex-col items-center gap-2 py-4">
@@ -1014,15 +1014,7 @@ async function remove(recordId: string) {
   background: transparent;
 }
 
-:deep(.p-datatable-tbody > tr > td) {
-  position: relative;
-  /* padding: 0!important;
-  .datatable-body-cell{
-    padding: var(--p-datatable-body-cell-sm-padding);
-  } */
-}
-
-:deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell) {
+:deep(.field-cell) {
   position: relative;
 }
 
@@ -1035,12 +1027,7 @@ async function remove(recordId: string) {
   justify-content: center;
   color: #64748b;
   font-size: 12px;
-}
-
-:deep(.table-row-select .p-datatable-tbody > tr:hover > td.row-select-cell::before),
-:deep(.table-row-select .p-datatable-tbody > tr.row-selected > td.row-select-cell::before),
-:deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell::before) {
-  opacity: 0;
+  border-right: 1px solid var(--p-datatable-body-cell-border-color);
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell .p-checkbox) {
