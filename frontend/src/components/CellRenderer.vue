@@ -6,7 +6,7 @@
       </span>
     </template>
     <template v-else-if="field.type === FIELD_TYPE_MULTI_SELECT && Array.isArray(getFieldData<string[]>(field.id))">
-      <CellMultiSelectDisplay
+      <MultiSelect
         :value="getFieldData<string[]>(field.id)!"
         :field="field"
         :row-height="rowHeight"
@@ -71,7 +71,7 @@ import {
   FIELD_TYPE_CHECKBOX,
   FIELD_TYPE_URL
 } from '../constants/table';
-import CellMultiSelectDisplay from './CellMultiSelectDisplay.vue';
+import MultiSelect from './cell-renderer/multiSelect.vue';
 import { isImage, getFileIcon } from '../utils/field';
 
 const props = defineProps<{
@@ -91,7 +91,7 @@ function getFieldData<T>(fieldId: string): T | undefined {
 }
 
 function getCellClass(field: Field, rowHeight: number) {
-  // MultiSelect handles its own overflow/clamping via CellMultiSelectDisplay component
+  // MultiSelect handles its own overflow/clamping via CellMultiSelect component
   if (field.type === FIELD_TYPE_MULTI_SELECT || field.type === FIELD_TYPE_SINGLE_SELECT) {
     return "";
   }

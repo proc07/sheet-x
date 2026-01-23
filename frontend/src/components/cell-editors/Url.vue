@@ -1,11 +1,12 @@
 <template>
   <div 
     ref="triggerRef"
+    @click="editorVisible = true"
     class="w-full h-full !absolute left-0 top-0 !rounded-none group bg-white flex items-center px-2"
   >
     <div v-if="local && local.link" class="flex items-center gap-1 w-full overflow-hidden">
       <a 
-        :href="local.link" 
+        :href="local.link"
         target="_blank"
         class="text-blue-500 hover:text-blue-700 truncate"
         @click.stop
@@ -93,7 +94,9 @@ const editorVisible = ref(false);
 const popupStyle = ref({});
 const form = ref({ text: '', link: '' });
 const error = ref(false);
-const URL_REGEX = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+// Standard URL regex that supports http/https, domain/IP, port, path, query params, and hash
+// Based on a simplified version of RFC 3986
+const URL_REGEX = /^(https?:\/\/)?((([a-zA-Z\d]([a-zA-Z\d-]*[a-zA-Z\d])*)\.)+[a-zA-Z]{2,}|((\d{1,3}\.){3}\d{1,3})|localhost)(:\d+)?(\/[-a-zA-Z\d%_.~+]*)*(\?[;&a-zA-Z\d%_.~+=-]*)?(#[-a-zA-Z\d_]*)?$/;
 
 onMounted(() => {
   editorVisible.value = true;
@@ -136,9 +139,6 @@ function openEditor() {
 
 function closeEditor() {
   editorVisible.value = false;
-  // If we close without saving, do we commit? Or just cancel? 
-  // Usually if user clicks cancel, we might not want to commit changes if we haven't updated model
-  emit('commit'); 
 }
 
 function save() {
@@ -160,7 +160,8 @@ function save() {
     link, 
     text: text || link 
   };
-  
-  closeEditor();
+
+  editorVisible.value = false;
+  emit('commit');
 }
 </script>

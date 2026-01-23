@@ -23,8 +23,8 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import type { Field } from '../stores/work';
-import { HEIGHT_PER_ROW } from '../constants/table';
+import type { Field } from '../../stores/work';
+import { HEIGHT_PER_ROW } from '../../constants/table';
 
 const props = defineProps<{
   value: any[];

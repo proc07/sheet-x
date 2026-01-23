@@ -10,6 +10,8 @@ export default defineConfig({
   plugins: [
     vue(),
     Components({
+      // Disable auto-import for project components, only use for PrimeVue
+      dirs: [],
       resolvers: [
         PrimeVueResolver()
       ]

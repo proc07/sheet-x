@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onUnmounted } from 'vue';
 import { InputNumber } from 'primevue';
 import type { Field } from '../../stores/work';
 
@@ -31,6 +31,11 @@ const local = computed({
     return Number(props.modelValue);
   },
   set: (v) => emit('update:modelValue', v),
+});
+
+onUnmounted(() => {
+  // Submit current value when component is unloaded
+  commit();
 });
 
 function commit() {

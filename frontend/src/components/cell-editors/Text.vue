@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onUnmounted } from 'vue';
 import { Textarea } from 'primevue';
 
 const props = defineProps<{
@@ -29,6 +29,11 @@ const local = computed({
 function commit() {
   emit('commit');
 }
+
+onUnmounted(() => {
+  // Submit current value when component is unloaded
+  commit();
+});
 </script>
 
 <style scoped>

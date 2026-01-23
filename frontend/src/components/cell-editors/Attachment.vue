@@ -213,5 +213,4 @@ async function handleFileUpload(event: Event) {
   }
 }
 
-// Add overlay listener logic here if needed (copied from CellEditor)
 </script>

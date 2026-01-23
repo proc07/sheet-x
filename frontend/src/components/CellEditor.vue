@@ -70,13 +70,4 @@ function commit() {
     value: local.value
   });
 }
-
-onUnmounted(() => {
-  // Submit current value when component is unloaded
-  commit();
-});
 </script>
-
-<style scoped>
-/* Common styles can be placed here if needed */
-</style>

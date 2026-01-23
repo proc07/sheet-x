@@ -915,9 +915,7 @@ function onUpdateCell(payload: { recordId: string; revision: number; fieldId: st
   const record = work.records.find((item) => item.id === recordId);
   if (!record) return;
 
-  if (typeof value === 'string' && value.trim().length === 0) {
-    return;
-  }
+  console.log(record.data[fieldId], value)
   if (type === FIELD_TYPE_DATE && isSameTime(record.data[fieldId], value)) {
     return;
   }
