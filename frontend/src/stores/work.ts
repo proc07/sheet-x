@@ -39,8 +39,11 @@ export type Field = {
     | 'WORKFLOW' | 'BUTTON' | 'AUTO_NUMBER' | 'PHONE' | 'EMAIL' | 'LOCATION' | 'BARCODE' | 'PROGRESS' | 'CURRENCY' | 'RATING' // Business
     | 'LINK_BIDIRECTIONAL' | 'LINK_UNIDIRECTIONAL' | 'CREATED_BY' | 'UPDATED_BY' | 'CREATED_TIME' | 'UPDATED_TIME'; // Advanced
   required: boolean;
-  options?: any;
+  config?: any;
   position: number;
+  width?: number;
+  hidden?: boolean;
+  frozen?: boolean;
 };
 export type RecordRow = { id: string; data: Record<string, any>; revision: number };
 
@@ -161,9 +164,11 @@ export const useWorkStore = defineStore('work', {
       await api.delete(`/fields/${fieldId}`);
       this.fields = this.fields.filter(field => field.id !== fieldId);
     },
-    async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number; hidden?: boolean; statType?: string }>) {
+    async updateFieldLayout(tableId: string, fields: Array<{ id: string; position?: number; width?: number; hidden?: boolean; frozen?: boolean; statType?: string; config?: any }>) {
       if (!tableId || fields.length === 0) return [];
       const { data } = await api.patch('/fields/layout', { tableId, fields });
+
+      // update local fields
       if (Array.isArray(data)) {
         data.forEach((updated) => {
           const idx = this.fields.findIndex((field) => field.id === updated.id);

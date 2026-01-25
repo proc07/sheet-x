@@ -48,7 +48,7 @@ onMounted(() => {
 });
 
 function getLabel(val: string) {
-  const options = props.field.options?.options as Array<{ id: string; name: string }>;
+  const options = props.field.config?.options as Array<{ id: string; name: string }>;
   if (!options) return val;
   const opt = options.find(o => o.name === val || o.id === val);
   return opt ? opt.name : val;

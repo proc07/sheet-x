@@ -14,7 +14,7 @@ export class CreateFieldDto {
   type!: FieldType;
 
   @IsOptional()
-  options?: any;
+  config?: any;
 
   @IsOptional()
   @IsBoolean()
@@ -46,6 +46,13 @@ export class UpdateFieldLayoutItemDto {
   @IsOptional()
   @IsString()
   statType?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  frozen?: boolean;
+
+  @IsOptional()
+  config?: any;
 }
 
 export class UpdateFieldLayoutDto {
@@ -69,7 +76,7 @@ export class UpdateFieldDto {
   type?: FieldType;
 
   @IsOptional()
-  options?: any;
+  config?: any;
 
   @IsOptional()
   @IsBoolean()

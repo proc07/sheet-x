@@ -1,9 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Field, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFieldDto, UpdateFieldDto, UpdateFieldLayoutDto } from './dto';
-
-const DEFAULT_FIELD_WIDTH = 160;
 
 @Injectable()
 export class FieldsService {
@@ -41,7 +39,7 @@ export class FieldsService {
     await this.assertTableReadable(userId, tableId);
     return this.prisma.field.findMany({
       where: { tableId },
-      select: { id: true, name: true, type: true, required: true, options: true, position: true },
+      select: { id: true, name: true, type: true, required: true, config: true, position: true, width: true, hidden: true, frozen: true },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
   }
@@ -62,10 +60,10 @@ export class FieldsService {
       data: {
         name: dto.name,
         type: dto.type,
-        options: dto.options ?? undefined,
+        config: dto.config ?? undefined,
         required: dto.required,
       },
-      select: { id: true, name: true, type: true, required: true, options: true, position: true },
+      select: { id: true, name: true, type: true, required: true, config: true, position: true, width: true, hidden: true, frozen: true },
     });
   }
 
@@ -85,11 +83,11 @@ export class FieldsService {
         tableId: dto.tableId,
         name: dto.name,
         type: dto.type,
-        options: dto.options ?? undefined,
+        config: dto.config ?? undefined,
         required: dto.required ?? false,
         position,
       },
-      select: { id: true, name: true, type: true, required: true, options: true, position: true },
+      select: { id: true, name: true, type: true, required: true, config: true, position: true, width: true, hidden: true, frozen: true },
     });
   }
 
@@ -108,40 +106,55 @@ export class FieldsService {
       throw new BadRequestException('fields is required');
     }
 
-    // Load current options so width updates can merge without clobbering.
+    // Load current config so we can merge partial updates like statType
     const storedFields = await this.prisma.field.findMany({
       where: { tableId: dto.tableId, id: { in: fieldIds } },
-      select: { id: true, options: true },
+      select: { id: true, config: true },
     });
     if (storedFields.length !== fieldIds.length) {
       throw new ForbiddenException('Field not found');
     }
 
-    const optionsMap = new Map(
-      storedFields.map((field) => [field.id, (field.options ?? {}) as Record<string, any>])
+    const configMap = new Map(
+      storedFields.map((field) => [field.id, (field.config ?? {}) as Record<string, any>])
     );
 
     const updates: Prisma.PrismaPromise<any>[] = [];
     for (const field of dto.fields) {
-      const data: { position?: number; options?: Record<string, any> } = {};
-      // Normalize inputs; only persist valid numeric updates.
-      if (typeof field.position === 'number' && Number.isFinite(field.position)) {
-        data.position = Math.max(0, Math.trunc(field.position));
+      const data: Prisma.FieldUpdateInput = {};
+      // DTO validation ensures types are correct if present
+      if (field.position !== undefined) {
+        data.position = field.position;
       }
-      const baseOptions = optionsMap.get(field.id) ?? {};
-      let nextOptions: Record<string, any> | null = null;
-      if (typeof field.width === 'number' && Number.isFinite(field.width)) {
-        nextOptions = { ...(nextOptions ?? baseOptions), width: Math.max(DEFAULT_FIELD_WIDTH, Math.trunc(field.width)) };
+      if (field.width !== undefined) {
+        data.width = field.width;
       }
-      if (typeof field.hidden === 'boolean') {
-        nextOptions = { ...(nextOptions ?? baseOptions), hidden: field.hidden };
+      if (field.hidden !== undefined) {
+        data.hidden = field.hidden;
       }
-      if (typeof field.statType === 'string') {
-        nextOptions = { ...(nextOptions ?? baseOptions), statType: field.statType };
+      if (field.frozen !== undefined) {
+        data.frozen = field.frozen;
       }
-      if (nextOptions) {
-        data.options = nextOptions;
+
+      // Config merging
+      const baseConfig = configMap.get(field.id) ?? {};
+      let nextConfig: Record<string, any> | null = null;
+      
+      if (field.config) {
+        nextConfig = { ...baseConfig, ...field.config };
       }
+
+      // Purpose of statType:
+      // Specifies the statistical type for the field, such as sum, count, average, etc.
+      // When set to 'none', no statistics are calculated.
+      if (field.statType !== undefined) {
+        nextConfig = { ...(nextConfig ?? baseConfig), statType: field.statType };
+      }
+
+      if (nextConfig) {
+        data.config = nextConfig;
+      }
+
       if (Object.keys(data).length === 0) {
         continue;
       }
@@ -149,7 +162,7 @@ export class FieldsService {
         this.prisma.field.update({
           where: { id: field.id },
           data,
-          select: { id: true, name: true, type: true, required: true, options: true, position: true },
+          select: { id: true, name: true, type: true, required: true, config: true, position: true, width: true, hidden: true, frozen: true },
         })
       );
     }

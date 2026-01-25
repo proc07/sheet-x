@@ -45,7 +45,7 @@ function commit() {
 // PrimeVue 的 Calendar (DatePicker) 使用了一套基于 jQuery UI Datepicker 的老式格式字符串（例如 yy 代表 4 位年份）
 // https://primevue.org/datepicker/#format
 const calendarDateFormat = computed(() => {
-  const fmt = props.field.options?.format;
+  const fmt = props.field.config?.format;
   if (!fmt) return 'yy-mm-dd';
   // Extract date part (everything before the first space)
   const datePart = fmt.split(' ')[0];
@@ -57,7 +57,7 @@ const calendarDateFormat = computed(() => {
 });
 
 const calendarShowTime = computed(() => {
-  const fmt = props.field.options?.format;
+  const fmt = props.field.config?.format;
   return fmt ? fmt.includes('HH:mm') : false;
 });
 </script>

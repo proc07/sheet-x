@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, nextTick } from 'vue';
+import { computed, onMounted, ref, nextTick, onUnmounted } from 'vue';
 import { MultiSelect } from 'primevue';
 import type { Field } from '../../stores/work';
 import { EDITOR_OVERLAY_CLASS, setupOverlayPropagation } from '../../utils/overlay';
@@ -56,7 +56,7 @@ const local = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const choices = computed(() => props.field.options?.options ?? []);
+const choices = computed(() => props.field.config?.options ?? []);
 
 function commit() {
   emit('commit');
@@ -66,5 +66,10 @@ onMounted(() => {
   nextTick(() => {
     multiSelectRef.value?.show();
   });
+});
+
+onUnmounted(() => {
+  // Submit current value when component is unloaded
+  commit();
 });
 </script>

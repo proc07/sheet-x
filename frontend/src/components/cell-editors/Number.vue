@@ -43,7 +43,7 @@ function commit() {
 }
 
 const numberFieldProps = computed(() => {
-  const fmt = props.field.options?.format;
+  const fmt = props.field.config?.format;
   if (!fmt || fmt === 'integer') {
     return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: false };
   }

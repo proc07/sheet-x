@@ -72,19 +72,27 @@
           :bodyStyle="{ textAlign: 'center', 'z-index': 2 }"
         ></Column>
         <Column
-          v-for="field in visibleFields"
+          v-for="(field, index) in visibleFields"
           :key="field.id"
           :columnKey="field.id"
           :field="`${field.id}`"
           :style="{ minWidth: `${DEFAULT_FIELD_WIDTH}px`, width: `${getFieldWidth(field)}px`}"
-          headerClass="field-cell"
+          headerClass="field-cell group"
           bodyClass="field-cell"
           :pt="{ headerCell: { 'data-field-id': field.id } }"
+          :frozen="!!field.frozen"
         >
           <template #header>
-            <div class="flex items-center gap-1 w-full">
-              <i class="pi text-slate-400 text-xs mr-1" :class="getFieldTypeIcon(field.type)"></i>
-              <span class="truncate">{{ field.name }}</span>
+            <div class="flex items-center gap-1 w-full overflow-hidden">
+              <i class="pi text-slate-400 text-xs mr-1 flex-shrink-0" :class="getFieldTypeIcon(field.type)"></i>
+              <span class="truncate flex-1" :title="field.name">{{ field.name }}</span>
+              <div 
+                class="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-200 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                :class="{ 'opacity-100 bg-slate-100': fieldMenuContext?.field.id === field.id && fieldMenuVisible }"
+                @click.stop="openFieldMenu($event, field, index)"
+              >
+                <i class="pi pi-angle-down text-xs text-slate-500"></i>
+              </div>
             </div>
           </template>
           <template #body="{ data }">
@@ -105,7 +113,7 @@
             />
           </template>
         </Column>
-        <Column 
+        <Column
           columnKey="field-add"
           :style="{ width: hasHorizontalScroll ?  DEFAULT_FIELD_WIDTH + 'px' : 'auto' }"
           :reorderableColumn="false"
@@ -229,12 +237,14 @@
         </template>
       </ContextMenu>
 
+      <Menu ref="fieldMenu" :model="fieldMenuItems" popup />
+
       <Dialog v-model:visible="fieldCreateVisible" :draggable="false" modal header="新增字段" class="min-w-[320px]">
         <FieldCreateForm
           :tableId="resolvedTableId"
           :initialName="currentEditField?.name"
           :initialType="currentEditField?.type"
-          :initialOptions="currentEditField?.options"
+          :initialOptions="currentEditField?.config"
           @submit="handleFieldCreateSubmit"
           @cancel="closeFieldCreatePopover"
         />
@@ -281,8 +291,9 @@ import {
   FIELD_TYPE_URL
 } from '../constants/table';
 import FieldCreateForm from '../components/FieldCreateForm.vue';
-import { normalizeRowHeight, isSameTime, getFieldTypeIcon, isImage, getFileIcon } from '../utils/field';
+import { normalizeRowHeight, getFieldTypeIcon, isImage, getFileIcon } from '../utils/field';
 import { Image } from 'primevue';
+import isEqual from '../utils/isEqual';
 
 const props = defineProps<{ tableId?: string }>();
 const route = useRoute();
@@ -290,6 +301,95 @@ const router = useRouter();
 const work = useWorkStore();
 const toast = useToast();
 const confirm = useConfirm();
+
+const fieldMenu = ref();
+const fieldMenuVisible = ref(false);
+const fieldMenuContext = ref<{ field: Field; index: number } | null>(null);
+const fieldMenuItems = computed<MenuItem[]>(() => {
+  if (!fieldMenuContext.value) return [];
+  const { field, index } = fieldMenuContext.value;
+  
+  const isFrozen = !!field.frozen;
+  
+  return [
+    { 
+      label: '修改字段/列', 
+      icon: 'pi pi-pencil', 
+      command: () => openFieldEdit(field) 
+    },
+    { 
+      label: '编辑字段/列描述', 
+      icon: 'pi pi-info-circle', 
+      disabled: true // Todo
+    },
+    { separator: true },
+    { 
+      label: '复制字段/列', 
+      icon: 'pi pi-clone', 
+      disabled: true // Todo
+    },
+    { 
+      label: '隐藏字段', 
+      icon: 'pi pi-eye-slash', 
+      command: () => toggleFieldVisibility(field)
+    },
+    { separator: true },
+    { 
+      label: '向左插入字段/列', 
+      icon: 'pi pi-arrow-left', 
+      disabled: true // Todo
+    },
+    { 
+      label: '向右插入字段/列', 
+      icon: 'pi pi-arrow-right', 
+      disabled: true // Todo
+    },
+    { 
+      label: isFrozen ? '取消冻结' : '冻结字段/列', 
+      icon: 'pi pi-pause', 
+      command: () => handleFreezeColumn(field)
+    },
+    { separator: true },
+    { 
+      label: '按 A 到 Z 排序', 
+      icon: 'pi pi-sort-alpha-down', 
+      disabled: true // Todo
+    },
+    { 
+      label: '按 Z 到 A 排序', 
+      icon: 'pi pi-sort-alpha-up', 
+      disabled: true // Todo
+    },
+    { separator: true },
+    { 
+      label: '删除字段/列', 
+      icon: 'pi pi-trash', 
+      class: 'text-red-500',
+      command: () => handleDeleteField(field)
+    },
+  ];
+});
+
+function openFieldMenu(event: MouseEvent, field: Field, index: number) {
+  fieldMenuContext.value = { field, index };
+  fieldMenuVisible.value = true;
+  fieldMenu.value.show(event);
+}
+
+// Hack to track menu visibility for active state
+watch(() => fieldMenu.value?.visible, (val) => {
+  fieldMenuVisible.value = !!val;
+});
+
+function handleFreezeColumn(field: Field) {
+  const currentFrozen = !!field.frozen;
+  const nextFrozen = !currentFrozen;
+  
+  field.frozen = nextFrozen;
+  
+  // Persist only the changed field
+  persistFieldLayout([{ id: field.id, frozen: nextFrozen }]);
+}
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
@@ -309,7 +409,7 @@ async function handleFieldCreateSubmit(payload: { name: string; type: Field['typ
       await work.updateField(tableId, fieldEditId.value, {
         name: payload.name,
         type: payload.type,
-        options: payload.options
+        config: payload.options // map options to config
       });
       toast.add({ severity: 'success', summary: '更新成功', life: 3000 });
     } catch (e) {
@@ -319,7 +419,7 @@ async function handleFieldCreateSubmit(payload: { name: string; type: Field['typ
     await work.createField(tableId, { 
       name: payload.name, 
       type: payload.type, 
-      options: payload.options 
+      config: payload.options 
     });
   }
   closeFieldCreatePopover();
@@ -397,7 +497,7 @@ const recordIndexMap = computed(() => {
 });
 
 const selectedRowIds = computed(() => new Set(selectedRows.value.map((row) => row.id)));
-const visibleFields = computed(() => work.fields.filter((field) => !field.options?.hidden));
+const visibleFields = computed(() => work.fields.filter((field) => !field.hidden));
 
 function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
   const previous = recordUpdateQueue.get(recordId) ?? Promise.resolve();
@@ -480,7 +580,7 @@ watch(() => work.fields, async (fields) => {
   const requests: { fieldId: string; type: string }[] = [];
   
   fields.forEach((field) => {
-    const statType = field.options?.statType;
+    const statType = field.config?.statType;
     // Skip if already loaded or no stat type
     if (!statType || statType === 'none' || fieldStats.value[field.id]) return;
 
@@ -535,20 +635,21 @@ function updateFieldConfigMaxHeight() {
 }
 
 function isFieldHidden(field: Field) {
-  return Boolean(field.options?.hidden);
+  return Boolean(field.hidden);
 }
 
 async function toggleFieldVisibility(field: Field) {
   const tableId = resolvedTableId.value;
   if (!tableId) return;
   const nextHidden = !isFieldHidden(field);
-  const previousOptions = field.options ?? {};
-  field.options = { ...previousOptions, hidden: nextHidden };
+  // Optimistic
+  field.hidden = nextHidden;
   try {
     await work.updateFieldLayout(tableId, [{ id: field.id, hidden: nextHidden }]);
     nextTick(updateHorizontalScroll);
   } catch (e: any) {
-    field.options = previousOptions;
+    // revert
+    field.hidden = !nextHidden;
     showUpdateErrorToast(e?.response?.data?.message ?? '更新字段显示状态失败');
   }
 }
@@ -625,7 +726,7 @@ function selectRowHeight(value: number) {
 }
 
 function getFieldWidth(field: Field) {
-  const width = field.options?.width;
+  const width = field.width;
   if (typeof width === 'number' && Number.isFinite(width)) {
     return Math.max(DEFAULT_FIELD_WIDTH, Math.round(width));
   }
@@ -656,7 +757,7 @@ function showUpdateErrorToast(detail: string, summary = '更新失败') {
   });
 }
 
-async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number; hidden?: boolean }>) {
+async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number; hidden?: boolean; frozen?: boolean }>) {
   const tableId = resolvedTableId.value;
   if (!tableId || updates.length === 0) return;
   try {
@@ -676,13 +777,13 @@ const onColReorder = async (_event: DataTableColumnReorderEvent) => {
   // Sync store order with UI order, then persist positions.
   const fieldMap = new Map(work.fields.map((field) => [field.id, field]));
   const orderedVisible = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
-  const visibleCount = work.fields.filter((field) => !field.options?.hidden).length;
+  const visibleCount = work.fields.filter((field) => !field.hidden).length;
   if (orderedVisible.length !== visibleCount) return;
 
   const orderedFields: Field[] = [];
   let visibleIndex = 0;
   for (const field of work.fields) {
-    if (field.options?.hidden) {
+    if (field.hidden) {
       orderedFields.push(field);
     } else {
       orderedFields.push(orderedVisible[visibleIndex]);
@@ -709,9 +810,9 @@ const onColumnResizeEnd = async (event: DataTableColumnResizeEndEvent) => {
   if (!field) return;
   // Use the actual header width so resize is saved as the user sees it.
   const width = Math.max(100, Math.round(header.getBoundingClientRect().width));
-  const currentWidth = field.options?.width;
+  const currentWidth = field.width;
   if (currentWidth === width) return;
-  field.options = { ...(field.options ?? {}), width };
+  field.width = width;
   await persistFieldLayout([{ id: fieldId, width }]);
   nextTick(updateHorizontalScroll);
 };
@@ -719,14 +820,6 @@ const onRowReorder = (event: DataTableRowReorderEvent) => {
   console.log('row reorder', event);
   work.records = event.value;
 };
-
-function getSelectOptionName(field: Field, value: string) {
-  const options = field.options?.options as Array<{ id: string; name: string }>;
-  if (!options) return value;
-  
-  const opt = options.find(o => o.id === value);
-  return opt ? opt.name : value;
-}
 
 const loading = ref(false);
 const tableWrap = ref<HTMLDivElement | null>(null);
@@ -886,21 +979,13 @@ async function reload() {
   }
 }
 
-function getCellClass(field: Field, rowHeight: number) {
-  // MultiSelect handles its own overflow/clamping via CellMultiSelectDisplay component
-  if (field.type === FIELD_TYPE_MULTI_SELECT || field.type === FIELD_TYPE_SINGLE_SELECT) {
-    return "";
-  }
-  return `line-clamp-${rowHeight}`;
-}
-
 async function createRecord() {
   const tableId = resolvedTableId.value;
   if (!tableId) return;
   
   const initialData: Record<string, any> = {};
   work.fields.forEach(field => {
-    const val = field.options?.defaultValue;
+    const val = field.config?.defaultValue;
     if (val !== undefined && val !== null && val !== '') {
       initialData[field.id] = val;
     }
@@ -915,12 +1000,10 @@ function onUpdateCell(payload: { recordId: string; revision: number; fieldId: st
   const record = work.records.find((item) => item.id === recordId);
   if (!record) return;
 
-  console.log(record.data[fieldId], value)
-  if (type === FIELD_TYPE_DATE && isSameTime(record.data[fieldId], value)) {
-    return;
-  }
-  // todo: optimize
-  if (Object.is(record.data[fieldId], value)) {
+  const oldValue = record.data[fieldId];
+
+  // optimize: avoid unnecessary update
+  if (isEqual(oldValue, value)) {
     return;
   }
 

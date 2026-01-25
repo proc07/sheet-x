@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue';
+import { computed, ref } from 'vue';
 import type { Field, RecordRow } from '../stores/work';
 import {
   FIELD_TYPE_TEXT,
@@ -22,7 +22,7 @@ import {
   FIELD_TYPE_CHECKBOX,
   FIELD_TYPE_URL,
 } from '../constants/table';
-import { cloneDeep } from '../utils/deepClone';
+import cloneDeep from '../utils/deepClone';
 
 // Dynamic Editors
 import TextEditor from './cell-editors/Text.vue';

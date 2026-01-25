@@ -1,6 +1,6 @@
 import type { Field } from '../stores/work';
 
-export const DEFAULT_FIELD_WIDTH = 160;
+export const DEFAULT_FIELD_WIDTH = 150;
 export const HEIGHT_PER_ROW = 21;
 export const ROW_PADDING = 11.5
 
@@ -153,8 +153,8 @@ export function formatDate(value: any, field?: Field) {
     if (Number.isNaN(date.getTime())) return value;
 
     // Default format if no config
-    let format = field?.options?.dateFormat || 'YYYY-MM-DD HH:mm';
-    
+    let format = field?.config?.dateFormat || 'YYYY-MM-DD HH:mm';
+
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');

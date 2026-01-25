@@ -245,7 +245,7 @@ function getFieldMeta(field: Field) {
 }
 
 function isFieldHidden(field: Field) {
-  return Boolean(field.options?.hidden);
+  return Boolean(field.hidden);
 }
 
 function toggleFieldVisibility(field: Field) {

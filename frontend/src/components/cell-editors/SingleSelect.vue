@@ -38,7 +38,7 @@ const local = computed({
   set: (v) => emit('update:modelValue', v),
 });
 
-const choices = computed(() => props.field.options?.options ?? []);
+const choices = computed(() => props.field.config?.options ?? []);
 
 function commit() {
   emit('commit');

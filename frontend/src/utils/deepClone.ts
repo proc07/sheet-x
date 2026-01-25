@@ -1,4 +1,4 @@
-export function cloneDeep<T>(value: T): T {
+export default function cloneDeep<T>(value: T): T {
   return baseClone(value, new WeakMap()) as T;
 }
 

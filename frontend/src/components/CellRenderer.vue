@@ -71,7 +71,7 @@ import {
   FIELD_TYPE_CHECKBOX,
   FIELD_TYPE_URL
 } from '../constants/table';
-import MultiSelect from './cell-renderer/multiSelect.vue';
+import MultiSelect from './cell-renderer/MultiSelectCell.vue';
 import { isImage, getFileIcon } from '../utils/field';
 
 const props = defineProps<{
@@ -99,7 +99,7 @@ function getCellClass(field: Field, rowHeight: number) {
 }
 
 function getSelectOptionName(field: Field, value: string) {
-  const options = field.options?.options as Array<{ id: string; name: string }>;
+  const options = field.config?.options as Array<{ id: string; name: string }>;
   if (!options) return value;
   
   const opt = options.find(o => o.id === value);

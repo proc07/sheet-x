@@ -122,8 +122,12 @@ model Field {
   name      String
   type      FieldType
   required  Boolean   @default(false)
-  options   Json?     // e.g. select options: {choices:[{id,label,color?}]}
+  config   Json?     // e.g. select options: {choices:[{id,label,color?}]}
   position  Int       @default(0)
+  width     Int?      @default(150)
+  hidden    Boolean   @default(false)
+  frozen    Boolean   @default(false)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
