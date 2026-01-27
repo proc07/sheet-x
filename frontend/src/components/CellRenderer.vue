@@ -6,7 +6,7 @@
       </span>
     </template>
     <template v-else-if="field.type === FIELD_TYPE_MULTI_SELECT && Array.isArray(getFieldData<string[]>(field.id))">
-      <MultiSelect
+      <MultiSelectCell
         :value="getFieldData<string[]>(field.id)!"
         :field="field"
         :row-height="rowHeight"
@@ -71,7 +71,7 @@ import {
   FIELD_TYPE_CHECKBOX,
   FIELD_TYPE_URL
 } from '../constants/table';
-import MultiSelect from './cell-renderer/MultiSelectCell.vue';
+import MultiSelectCell from './cell-renderer/MultiSelectCell.vue';
 import { isImage, getFileIcon } from '../utils/field';
 
 const props = defineProps<{

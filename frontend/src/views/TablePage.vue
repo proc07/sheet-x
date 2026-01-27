@@ -68,17 +68,36 @@
           frozen
           headerClass="row-select-cell"
           bodyClass="row-select-cell"
-          :headerStyle="{ width: '40px', padding: '10px', 'border-right': '1px solid var(--p-datatable-body-cell-border-color)' }"
-          :bodyStyle="{ textAlign: 'center', 'z-index': 2 }"
+          :headerStyle="{ width: '40px', padding: '10px' }"
+          :bodyStyle="{ textAlign: 'center' }"
         ></Column>
+        <Column
+          :reorderableColumn="false"
+          columnKey="row-id"
+          frozen
+          header="ID"
+          headerClass="w-[100px] p-10 cursor-unset! frozen-border-right"
+          bodyClass="frozen-border-right"
+        >
+          <template #body="{ data }">
+            <div 
+              class="flex items-center w-full h-full cursor-pointer group -ml-2 pl-2" 
+              @click="copyId(data.id)"
+              title="点击复制 ID"
+            >
+              <i class="pi pi-copy text-[10px] text-slate-300 mr-1.5 transition-opacity"></i>
+              <span class="text-xs text-gray-400 font-mono">{{ data.id.slice(0, 8) }}</span>
+            </div>
+          </template>
+        </Column>
         <Column
           v-for="(field, index) in visibleFields"
           :key="field.id"
           :columnKey="field.id"
           :field="`${field.id}`"
           :style="{ minWidth: `${DEFAULT_FIELD_WIDTH}px`, width: `${getFieldWidth(field)}px`}"
-          headerClass="field-cell group"
-          bodyClass="field-cell"
+          :headerClass="`field-cell group ${field.frozen ? 'frozen-border-right' : ''}`"
+          :bodyClass="`field-cell ${field.frozen ? 'frozen-border-right' : ''}`"
           :pt="{ headerCell: { 'data-field-id': field.id } }"
           :frozen="!!field.frozen"
         >
@@ -105,7 +124,6 @@
             />
           </template>
           <template #editor="{ data }">
-            <!-- <div class="datatable-body-cell" :style="{ height: `${rowHeight * HEIGHT_PER_ROW}px` }"></div> -->
             <CellEditor
               :field="field"
               :record="data"
@@ -134,24 +152,32 @@
           <Row>
             <Column
               :colspan="2"
+              frozen
               :footer="`${work.records.length}条记录`"
+              footer-class="frozen-border-right"
               footer-style="text-align: right; font-size: 12px; color: #6b7280;"
             />
             <Column
-              v-for="(field, index) in visibleFields"
+              v-for="field in visibleFields"
               :key="`footer-${field.id}`"
-              footer-style="text-align: right; font-size: 12px; color: #6b7280; cursor: pointer;"
+              :frozen="!!field.frozen"
+              :footerClass="`text-right !text-[12px] cursor-pointer color-[#6b7280] field-cell ${field.frozen ? 'frozen-border-right' : ''}`"
             >
               <template #footer>
-                 <div v-show="index !== visibleFields.length - 1" @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
+                 <div @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
                    <span>{{ getStatLabel(field.id) }}</span>
-                   <i 
+                   <i
                     class="pi text-slate-400 group-hover:text-slate-600 !text-[12px]"
                     :class="currentStatFieldId === field.id && statPopoverVisible ? 'pi-sort-up-fill' : 'pi-sort-down-fill'"
                    ></i>
                  </div>
                </template>
              </Column>
+               <Column
+                columnKey="field-add"
+                :style="{ width: hasHorizontalScroll ?  DEFAULT_FIELD_WIDTH + 'px' : 'auto' }"
+              >
+              </Column>
            </Row>
          </ColumnGroup>
        </DataTable>
@@ -237,7 +263,7 @@
         </template>
       </ContextMenu>
 
-      <Menu ref="fieldMenu" :model="fieldMenuItems" popup />
+      <Menu ref="fieldMenu" :model="fieldMenuItems" popup @show="fieldMenuVisible = true" @hide="fieldMenuVisible = false" />
 
       <Dialog v-model:visible="fieldCreateVisible" :draggable="false" modal header="新增字段" class="min-w-[320px]">
         <FieldCreateForm
@@ -324,11 +350,6 @@ const fieldMenuItems = computed<MenuItem[]>(() => {
     },
     { separator: true },
     { 
-      label: '复制字段/列', 
-      icon: 'pi pi-clone', 
-      disabled: true // Todo
-    },
-    { 
       label: '隐藏字段', 
       icon: 'pi pi-eye-slash', 
       command: () => toggleFieldVisibility(field)
@@ -376,11 +397,6 @@ function openFieldMenu(event: MouseEvent, field: Field, index: number) {
   fieldMenu.value.show(event);
 }
 
-// Hack to track menu visibility for active state
-watch(() => fieldMenu.value?.visible, (val) => {
-  fieldMenuVisible.value = !!val;
-});
-
 function handleFreezeColumn(field: Field) {
   const currentFrozen = !!field.frozen;
   const nextFrozen = !currentFrozen;
@@ -389,6 +405,14 @@ function handleFreezeColumn(field: Field) {
   
   // Persist only the changed field
   persistFieldLayout([{ id: field.id, frozen: nextFrozen }]);
+}
+
+function copyId(id: string) {
+  navigator.clipboard.writeText(id).then(() => {
+    toast.add({ severity: 'success', summary: '复制成功', detail: id, life: 1000 });
+  }).catch(() => {
+    toast.add({ severity: 'error', summary: '复制失败', life: 2000 });
+  });
 }
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
@@ -1096,7 +1120,28 @@ async function remove(recordId: string) {
 }
 
 :deep(.field-cell) {
-  position: relative;
+  background-color: #fff;
+  position: relative; /* Required for editor positioning */
+}
+
+/* Ensure frozen columns have higher z-index, opaque background, and sticky positioning */
+:deep(.p-datatable .p-datatable-tbody > tr > td.p-datatable-frozen-column),
+:deep(.p-datatable .p-datatable-tfoot > tr > td.p-datatable-frozen-column) {
+  z-index: 2;
+  background-color: #ffffff;
+  position: sticky !important; /* Override relative */
+  left: 0; /* Ensure left is set if PrimeVue doesn't set it inline, though usually it does */
+}
+
+/* Maintain selection highlight for frozen columns */
+:deep(.table-row-select .p-datatable-tbody > tr.p-highlight > td.p-datatable-frozen-column),
+:deep(.table-row-select .p-datatable-tbody > tr.row-selected > td.p-datatable-frozen-column),
+:deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.p-datatable-frozen-column) {
+  background-color: #cbd5e1 !important;
+}
+
+:deep(.table-row-select .p-datatable-tbody > tr:hover > td.p-datatable-frozen-column) {
+  background-color: #f1f5f9;
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell::before) {
@@ -1108,7 +1153,6 @@ async function remove(recordId: string) {
   justify-content: center;
   color: #64748b;
   font-size: 12px;
-  border-right: 1px solid var(--p-datatable-body-cell-border-color);
 }
 
 :deep(.table-row-select .p-datatable-tbody > tr > td.row-select-cell .p-checkbox) {
@@ -1121,5 +1165,19 @@ async function remove(recordId: string) {
 :deep(.table-row-select .p-datatable-tbody > tr.p-datatable-row-selected > td.row-select-cell .p-checkbox) {
   opacity: 1;
   pointer-events: auto;
+}
+
+:deep(.frozen-border-right) {
+  overflow: unset!important;
+}
+:deep(.frozen-border-right)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 1px;
+  background-color: #e2e8f0;
+  z-index: 2;
 }
 </style>
