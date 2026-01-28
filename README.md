@@ -70,7 +70,6 @@ frontend/  # Vue3
 
 - View：保存筛选/排序/分组，并将查询条件下推到后端
 - RBAC：Base/Table/View 级别权限
-- 评论/@/通知：RecordComment + WebSocket
+- 评论/@/通知：对接 钉钉/飞书/企业微信等
 - 关联字段：Link + 反向引用维护
-- 公式字段：依赖图 + 增量计算
-- 审计：RecordRevision 或 event_sourcing
+- AI 自动化测试 参考：https://midscenejs.com/zh/quick-experience.html

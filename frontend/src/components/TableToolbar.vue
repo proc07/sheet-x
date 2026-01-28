@@ -93,6 +93,14 @@
     </Popover>
 
     <Menu ref="fieldMenu" :model="menuItems" :popup="true" />
+
+    <Popover ref="filterPopover">
+      <TableFilter
+        :fields="fields"
+        :modelValue="filters"
+        @update:modelValue="emit('update:filters', $event)"
+      />
+    </Popover>
   </div>
 </template>
 
@@ -100,11 +108,13 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { rowHeightOptions, fieldTypeMeta } from '../constants/table';
 import type { Field } from '../stores/work';
+import TableFilter, { type FilterCondition } from './TableFilter.vue';
 
 const props = defineProps<{
   fields: Field[];
   rowHeight: number;
   loading: boolean;
+  filters?: FilterCondition[];
 }>();
 
 const emit = defineEmits<{
@@ -115,10 +125,12 @@ const emit = defineEmits<{
   (e: 'editField', field: Field): void;
   (e: 'deleteField', field: Field): void;
   (e: 'reorderFields', fields: Field[]): void;
+  (e: 'update:filters', filters: FilterCondition[]): void;
 }>();
 
 const rowHeightPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const fieldConfigPopover = ref<{ toggle: (event: Event) => void; hide: () => void; visible: boolean } | null>(null);
+const filterPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
 const fieldConfigContent = ref<HTMLElement | null>(null);
 const fieldConfigListMaxHeight = ref(320);
 
@@ -227,6 +239,10 @@ function toggleFieldConfigPopover(event: MouseEvent) {
   }
 }
 
+function toggleFilterPopover(event: MouseEvent) {
+  filterPopover.value?.toggle(event);
+}
+
 function updateFieldConfigMaxHeight() {
   const content = fieldConfigContent.value;
   if (!content) return;
@@ -281,7 +297,7 @@ const toolbarActions = [
   { label: '添加记录', icon: 'pi pi-plus', action: (e: MouseEvent) => emit('createRecord', e) },
   { label: '字段配置', icon: 'pi pi-cog', action: toggleFieldConfigPopover },
   { label: '视图配置', icon: 'pi pi-th-large' },
-  { label: '筛选', icon: 'pi pi-filter' },
+  { label: '筛选', icon: 'pi pi-filter', action: toggleFilterPopover },
   { label: '分组', icon: 'pi pi-sitemap' },
   { label: '排序', icon: 'pi pi-sort-amount-down' },
   { label: '行高', icon: 'pi pi-bars', action: toggleRowHeightPopover },

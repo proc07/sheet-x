@@ -4,6 +4,7 @@
       :fields="work.fields"
       :row-height="rowHeight"
       :loading="loading"
+      v-model:filters="filters"
       @update:row-height="selectRowHeight"
       @create-record="createRecord"
       @toggle-field-visibility="toggleFieldVisibility"
@@ -43,9 +44,9 @@
         @select-all-change="onSelectAllChange"
         @row-contextmenu="onRowContextMenu"
         @column-resize-end="onColumnResizeEnd"
-        :value="work.records"
+        :value="filteredRecords"
         :reorderableColumns="true"
-        @columnReorder="onColReorder"
+        @columnReorder="() => onColReorder(tableWrap)"
         @rowReorder="onRowReorder"
       >
         <template #empty>
@@ -153,18 +154,17 @@
             <Column
               :colspan="2"
               frozen
-              :footer="`${work.records.length}条记录`"
-              footer-class="frozen-border-right"
-              footer-style="text-align: right; font-size: 12px; color: #6b7280;"
+              :footer="`${filteredRecords.length}条记录`"
+              footer-class="frozen-border-right text-right! text-xs text-gray-400!"
             />
             <Column
               v-for="field in visibleFields"
               :key="`footer-${field.id}`"
               :frozen="!!field.frozen"
-              :footerClass="`text-right !text-[12px] cursor-pointer color-[#6b7280] field-cell ${field.frozen ? 'frozen-border-right' : ''}`"
+              :footer-class="`text-right text-xs text-gray-400! cursor-pointer field-cell ${field.frozen ? 'frozen-border-right' : ''}`"
             >
               <template #footer>
-                 <div @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 rounded flex items-center justify-end gap-1 group">
+                 <div @click="openStatPopover($event, field.id)" class="hover:bg-slate-100 py-1 px-1 rounded flex items-center justify-end gap-1 group">
                    <span>{{ getStatLabel(field.id) }}</span>
                    <i
                     class="pi text-slate-400 group-hover:text-slate-600 !text-[12px]"
@@ -280,408 +280,129 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type {
-  DataTableRowContextMenuEvent,
-  DataTableRowReorderEvent,
-  DataTableColumnReorderEvent,
-  DataTableColumnResizeEndEvent,
-  DataTableCellEditInitEvent,
-  DataTableCellEditCancelEvent,
-  DataTableCellEditCompleteEvent,
-  DataTableSelectAllChangeEvent,
-} from 'primevue/datatable';
-import type { InputNumberInputEvent } from 'primevue/inputnumber';
-import type { MenuItem } from 'primevue/menuitem';
-import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
-import { api, getBatchTableStats } from '../api';
-import { useWorkStore, type Field, type RecordRow } from '../stores/work';
-import CellEditor from '../components/CellEditor.vue';
-import CellRenderer from '../components/CellRenderer.vue';
-import TableToolbar from '../components/TableToolbar.vue';
-import {
-  ROW_PADDING,
-  DEFAULT_FIELD_WIDTH,
-  HEIGHT_PER_ROW,
-  rowHeightOptions,
-  statOptions,
-  fieldTypeMeta,
-  formatDate,
-  FIELD_TYPE_SINGLE_SELECT,
-  FIELD_TYPE_MULTI_SELECT,
-  FIELD_TYPE_DATE,
-  FIELD_TYPE_ATTACHMENT,
-  FIELD_TYPE_CHECKBOX,
-  FIELD_TYPE_URL
-} from '../constants/table';
-import FieldCreateForm from '../components/FieldCreateForm.vue';
-import { normalizeRowHeight, getFieldTypeIcon, isImage, getFileIcon } from '../utils/field';
+import { computed, watch, type Ref, nextTick } from 'vue';
+import type { DataTableRowReorderEvent } from 'primevue/datatable';
+import { useRoute } from 'vue-router';
 import { Image } from 'primevue';
-import isEqual from '../utils/isEqual';
+
+import { useWorkStore, type RecordRow } from '../stores/work';
+import TableToolbar from '../components/TableToolbar.vue';
+import CellRenderer from '../components/CellRenderer.vue';
+import CellEditor from '../components/CellEditor.vue';
+import FieldCreateForm from '../components/FieldCreateForm.vue';
+import { DEFAULT_FIELD_WIDTH } from '../constants/table';
+import { getFieldTypeIcon, isImage, getFileIcon } from '../utils/field';
+
+import { useTableFilter } from '../composables/table/useTableFilter';
+import { useTableStats } from '../composables/table/useTableStats';
+import { useTableLayout } from '../composables/table/useTableLayout';
+import { useTableFields } from '../composables/table/useTableFields';
+import { useTableRecords } from '../composables/table/useTableRecords';
+import { useTableSelection } from '../composables/table/useTableSelection';
 
 const props = defineProps<{ tableId?: string }>();
 const route = useRoute();
-const router = useRouter();
 const work = useWorkStore();
-const toast = useToast();
-const confirm = useConfirm();
-
-const fieldMenu = ref();
-const fieldMenuVisible = ref(false);
-const fieldMenuContext = ref<{ field: Field; index: number } | null>(null);
-const fieldMenuItems = computed<MenuItem[]>(() => {
-  if (!fieldMenuContext.value) return [];
-  const { field, index } = fieldMenuContext.value;
-  
-  const isFrozen = !!field.frozen;
-  
-  return [
-    { 
-      label: '修改字段/列', 
-      icon: 'pi pi-pencil', 
-      command: () => openFieldEdit(field) 
-    },
-    { 
-      label: '编辑字段/列描述', 
-      icon: 'pi pi-info-circle', 
-      disabled: true // Todo
-    },
-    { separator: true },
-    { 
-      label: '隐藏字段', 
-      icon: 'pi pi-eye-slash', 
-      command: () => toggleFieldVisibility(field)
-    },
-    { separator: true },
-    { 
-      label: '向左插入字段/列', 
-      icon: 'pi pi-arrow-left', 
-      disabled: true // Todo
-    },
-    { 
-      label: '向右插入字段/列', 
-      icon: 'pi pi-arrow-right', 
-      disabled: true // Todo
-    },
-    { 
-      label: isFrozen ? '取消冻结' : '冻结字段/列', 
-      icon: 'pi pi-pause', 
-      command: () => handleFreezeColumn(field)
-    },
-    { separator: true },
-    { 
-      label: '按 A 到 Z 排序', 
-      icon: 'pi pi-sort-alpha-down', 
-      disabled: true // Todo
-    },
-    { 
-      label: '按 Z 到 A 排序', 
-      icon: 'pi pi-sort-alpha-up', 
-      disabled: true // Todo
-    },
-    { separator: true },
-    { 
-      label: '删除字段/列', 
-      icon: 'pi pi-trash', 
-      class: 'text-red-500',
-      command: () => handleDeleteField(field)
-    },
-  ];
-});
-
-function openFieldMenu(event: MouseEvent, field: Field, index: number) {
-  fieldMenuContext.value = { field, index };
-  fieldMenuVisible.value = true;
-  fieldMenu.value.show(event);
-}
-
-function handleFreezeColumn(field: Field) {
-  const currentFrozen = !!field.frozen;
-  const nextFrozen = !currentFrozen;
-  
-  field.frozen = nextFrozen;
-  
-  // Persist only the changed field
-  persistFieldLayout([{ id: field.id, frozen: nextFrozen }]);
-}
-
-function copyId(id: string) {
-  navigator.clipboard.writeText(id).then(() => {
-    toast.add({ severity: 'success', summary: '复制成功', detail: id, life: 1000 });
-  }).catch(() => {
-    toast.add({ severity: 'error', summary: '复制失败', life: 2000 });
-  });
-}
 
 const resolvedTableId = computed(() => props.tableId ?? (route.params.tableId as string) ?? '');
 
-const fieldCreateVisible = ref(false);
-const fieldEditId = ref<string | null>(null);
-const currentEditField = computed(() => {
-  if (!fieldEditId.value) return null;
-  return work.fields.find((f) => f.id === fieldEditId.value);
+// 1. Filter
+const { 
+  filters, 
+  filteredRecords, 
+  recordIndexMap 
+} = useTableFilter();
+
+// 2. Stats
+const {
+  fieldStats,
+  statPopover,
+  currentStatFieldId,
+  statPopoverVisible,
+  statOptions,
+  getStatLabel,
+  openStatPopover,
+  selectStat
+} = useTableStats(resolvedTableId);
+
+// 3. Layout
+const {
+  dataTable,
+  tableWrap,
+  rowHeight,
+  hasHorizontalScroll,
+  tableHeight,
+  virtualScrollerOptions,
+  selectRowHeight,
+  updateHorizontalScroll,
+  normalizeRowHeight,
+} = useTableLayout(resolvedTableId);
+
+// 4. Fields
+const {
+  fieldMenu,
+  fieldMenuVisible,
+  fieldMenuContext,
+  fieldMenuItems,
+  openFieldMenu,
+  fieldCreateVisible,
+  currentEditField,
+  handleFieldCreateSubmit,
+  toggleFieldCreatePopover,
+  closeFieldCreatePopover,
+  openFieldCreateFromConfig,
+  openFieldEdit,
+  visibleFields,
+  handleDeleteField,
+  handleReorderFields,
+  toggleFieldVisibility,
+  getFieldWidth,
+  onColReorder,
+  onColumnResizeEnd,
+} = useTableFields(resolvedTableId, {
+  onLayoutUpdate: () => nextTick(updateHorizontalScroll)
 });
 
-async function handleFieldCreateSubmit(payload: { name: string; type: Field['type']; options: any }) {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  
-  if (fieldEditId.value) {
-    try {
-      await work.updateField(tableId, fieldEditId.value, {
-        name: payload.name,
-        type: payload.type,
-        config: payload.options // map options to config
-      });
-      toast.add({ severity: 'success', summary: '更新成功', life: 3000 });
-    } catch (e) {
-      toast.add({ severity: 'error', summary: '更新失败', life: 3000 });
-    }
-  } else {
-    await work.createField(tableId, { 
-      name: payload.name, 
-      type: payload.type, 
-      config: payload.options 
-    });
-  }
-  closeFieldCreatePopover();
-}
-
-function toggleFieldCreatePopover(event: MouseEvent, anchor?: HTMLElement) {
-  fieldEditId.value = null;
-  fieldCreateVisible.value = true;
-}
-
-function closeFieldCreatePopover() {
-  fieldCreateVisible.value = false;
-}
-
-function openFieldEdit(field: Field) {
-  fieldEditId.value = field.id;
-  fieldCreateVisible.value = true;
-}
-
-function handleDeleteField(field: Field) {
-  confirm.require({
-    message: `确定要删除字段 "${field.name}" 吗？此操作不可恢复。`,
-    header: '删除确认',
-    icon: 'pi pi-exclamation-triangle',
-    rejectClass: 'p-button-secondary',
-    rejectLabel: '取消',
-    acceptClass: 'p-button-danger',
-    acceptLabel: '删除',
-    accept: async () => {
-      const tableId = resolvedTableId.value;
-      if (!tableId) return;
-      try {
-        await work.deleteField(tableId, field.id);
-        toast.add({ severity: 'success', summary: '删除成功', life: 3000 });
-      } catch (e) {
-        toast.add({ severity: 'error', summary: '删除失败', life: 3000 });
-      }
-    }
-  });
-}
-
-async function handleReorderFields(newFields: Field[]) {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-
-  // Optimistic update locally
-  work.fields = newFields;
-  
-  // We should re-assign position in local objects too to be consistent
-  newFields.forEach((f, i) => f.position = i);
-
-  try {
-    await work.updateFieldLayout(tableId, newFields.map((f, i) => ({ id: f.id, position: i })));
-  } catch (e) {
-    console.error('Failed to reorder fields', e);
-    toast.add({ severity: 'error', summary: '排序失败', life: 3000 });
-    // Revert? (requires reloading or keeping backup)
-    await work.loadFields(tableId);
-  }
-}
-
-const fieldConfigContent = ref<HTMLElement | null>(null);
-const fieldConfigListMaxHeight = ref(320);
-
-const recordUpdateQueue = new Map<string, Promise<void>>();
-const editingRowId = ref<string | null>(null);
-const selectedRows = ref<RecordRow[]>([]);
-
-const recordIndexMap = computed(() => {
-  const map = new Map<string, number>();
-  work.records.forEach((record, index) => {
-    map.set(record.id, index);
-  });
-  return map;
+// 5. Records
+const {
+  loading,
+  editingRowId,
+  reload,
+  createRecord,
+  deleteRecord,
+  insertRows,
+  onCellEditInit,
+  onCellEditComplete,
+  onCellEditCancel,
+  onUpdateCell,
+  attachmentPreviewPopover,
+  previewFile,
+  showAttachmentPreview,
+  hideAttachmentPreview,
+  clearHideTimer,
+} = useTableRecords(resolvedTableId, {
+  onLayoutUpdate: () => nextTick(updateHorizontalScroll)
 });
 
-const selectedRowIds = computed(() => new Set(selectedRows.value.map((row) => row.id)));
-const visibleFields = computed(() => work.fields.filter((field) => !field.hidden));
+// 6. Selection
+const {
+  selectedRows,
+  selectedRowIds,
+  rowMenu,
+  contextMenuRow,
+  rowMenuItems,
+  onSelectAllChange,
+  onRowContextMenu,
+  copyId,
+  getInsertCount,
+  setInsertCount,
+  onInsertInput,
+} = useTableSelection({
+  insertRows: async (direction, count, anchor) => insertRows(direction, count, anchor),
+  deleteRecord: async (id) => deleteRecord(id),
+});
 
-function queueRecordUpdate(recordId: string, task: () => Promise<void>) {
-  const previous = recordUpdateQueue.get(recordId) ?? Promise.resolve();
-  const next = previous
-    .catch(() => undefined)
-    .then(task)
-    .finally(() => {
-      if (recordUpdateQueue.get(recordId) === next) {
-        recordUpdateQueue.delete(recordId);
-      }
-    });
-  recordUpdateQueue.set(recordId, next);
-  return next;
-}
-
-
-// Stats related
-const fieldStats = ref<Record<string, { type: string; value: string | number; loading: boolean }>>({});
-const statPopover = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
-const currentStatFieldId = ref<string | null>(null);
-const statPopoverVisible = ref(false);
-
-function getStatLabel(fieldId: string) {
-  const stat = fieldStats.value[fieldId];
-  if (!stat || stat.type === 'none') return '选择计算';
-  if (stat.loading) return '计算中...';
-
-  const val = stat.value;
-  switch (stat.type) {
-    case 'countAll': return `${val}条记录`;
-    case 'empty': return `未填写 ${val}`;
-    case 'filled': return `已填写 ${val}`;
-    case 'percentEmpty': return `未填写占比 ${Number(val).toFixed(1)}%`;
-    case 'percentFilled': return `已填写占比 ${Number(val).toFixed(1)}%`;
-    default: return '选择计算';
-  }
-}
-
-function openStatPopover(event: Event, fieldId: string) {
-  currentStatFieldId.value = fieldId;
-  statPopover.value?.toggle(event);
-}
-
-async function selectStat(type: string) {
-  const fieldId = currentStatFieldId.value;
-  if (!fieldId) return;
-  
-  statPopover.value?.hide();
-
-  if (type === 'none') {
-    fieldStats.value[fieldId] = { type, value: 0, loading: false };
-    // Persist changes
-    await work.updateFieldLayout(resolvedTableId.value, [{ id: fieldId, statType: 'none' }]);
-    return;
-  }
-
-  fieldStats.value[fieldId] = { 
-    type, 
-    value: fieldStats.value[fieldId]?.value ?? 0, 
-    loading: true 
-  };
-
-  // Persist changes
-  work.updateFieldLayout(resolvedTableId.value, [{ id: fieldId, statType: type }]);
-
-  try {
-    const res = await getBatchTableStats(resolvedTableId.value, [{ fieldId, type }]);
-    if (res.length > 0) {
-      fieldStats.value[fieldId] = { type: res[0].type, value: res[0].value, loading: false };
-    }
-  } catch (e) {
-    console.error(e);
-    toast.add({ severity: 'error', summary: '获取统计失败', detail: '请重试', life: 3000 });
-    fieldStats.value[fieldId] = { type: 'none', value: 0, loading: false };
-  }
-}
-
-// Initialize stats from field options
-watch(() => work.fields, async (fields) => {
-  const requests: { fieldId: string; type: string }[] = [];
-  
-  fields.forEach((field) => {
-    const statType = field.config?.statType;
-    // Skip if already loaded or no stat type
-    if (!statType || statType === 'none' || fieldStats.value[field.id]) return;
-
-    fieldStats.value[field.id] = { type: statType, value: 0, loading: true };
-    requests.push({ fieldId: field.id, type: statType });
-  });
-
-  if (requests.length === 0) return;
-
-  try {
-    const res = await getBatchTableStats(resolvedTableId.value, requests);
-    res.forEach((stat) => {
-      fieldStats.value[stat.fieldId] = { type: stat.type, value: stat.value, loading: false };
-    });
-  } catch (e) {
-    console.error(e);
-    // On batch error, reset all requested fields to none/error state
-    requests.forEach((req) => {
-      fieldStats.value[req.fieldId] = { type: 'none', value: 0, loading: false };
-    });
-  }
-}, { immediate: true, deep: true });
-
-const rowHeight = ref<typeof rowHeightOptions[number]['value']>(rowHeightOptions[0].value);
-const virtualScrollerOptions = computed(() => ({
-  itemSize: ROW_PADDING + rowHeight.value * HEIGHT_PER_ROW,
-  delay: 0,
-  numToleratedItems: 20,
-}));
-const hasHorizontalScroll = ref(false);
-
-function updateHorizontalScroll() {
-  const container = tableWrap.value?.querySelector('.p-datatable-table-container')?.childNodes?.[0] as HTMLElement | null;
-  if (!container) return;
-  const next = container.scrollWidth > container.clientWidth;
-  if (next !== hasHorizontalScroll.value) {
-    hasHorizontalScroll.value = next;
-  }
-}
-
-function updateFieldConfigMaxHeight() {
-  const content = fieldConfigContent.value;
-  if (!content) return;
-  const rect = content.getBoundingClientRect();
-  if (!rect.height && !rect.top) return;
-  const padding = 16;
-  const available = window.innerHeight - rect.top - padding;
-  const nextHeight = Math.max(0, Math.floor(available));
-  if (Number.isFinite(nextHeight)) {
-    fieldConfigListMaxHeight.value = nextHeight;
-  }
-}
-
-function isFieldHidden(field: Field) {
-  return Boolean(field.hidden);
-}
-
-async function toggleFieldVisibility(field: Field) {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  const nextHidden = !isFieldHidden(field);
-  // Optimistic
-  field.hidden = nextHidden;
-  try {
-    await work.updateFieldLayout(tableId, [{ id: field.id, hidden: nextHidden }]);
-    nextTick(updateHorizontalScroll);
-  } catch (e: any) {
-    // revert
-    field.hidden = !nextHidden;
-    showUpdateErrorToast(e?.response?.data?.message ?? '更新字段显示状态失败');
-  }
-}
-
-function openFieldCreateFromConfig(event: MouseEvent, anchor?: HTMLElement) {
-  toggleFieldCreatePopover(event, anchor);
-}
-
+// Row Styles & Classes
 function getRowClass(data: RecordRow) {
   return {
     'row-editing': editingRowId.value === data.id,
@@ -695,386 +416,24 @@ function getRowStyle(data: RecordRow) {
   return { '--row-index': `"${label}"` };
 }
 
-function onCellEditInit(event: DataTableCellEditInitEvent<RecordRow>) {
-  editingRowId.value = event.data?.id ?? null;
-}
-
-function onCellEditComplete(event: DataTableCellEditCompleteEvent<RecordRow>) {
-  if (editingRowId.value === event.data?.id) {
-    editingRowId.value = null;
-  }
-}
-
-function onCellEditCancel(event: DataTableCellEditCancelEvent) {
-  if (editingRowId.value === event.data?.id) {
-    editingRowId.value = null;
-  }
-}
-
-function onSelectAllChange(event: DataTableSelectAllChangeEvent) {
-  selectedRows.value = event.checked ? [...work.records] : [];
-}
-
-const dataTable = ref<any>(null);
-
-function selectRowHeight(value: number) {
-  const previous = rowHeight.value;
-  // Calculate current scroll index
-  const scroller = dataTable.value?.$el.querySelector('.p-datatable-wrapper') || dataTable.value?.$el.querySelector('.p-virtualscroller');
-  let topIndex = 0;
-  if (scroller) {
-    const oldItemSize = ROW_PADDING + previous * HEIGHT_PER_ROW;
-    topIndex = Math.floor(scroller.scrollTop / oldItemSize);
-  }
-
-  rowHeight.value = value as typeof rowHeightOptions[number]['value'];
-  
-  // Restore scroll position after render
-  nextTick(() => {
-    const newScroller = dataTable.value?.$el.querySelector('.p-datatable-wrapper') || dataTable.value?.$el.querySelector('.p-virtualscroller');
-    if (newScroller) {
-      const newItemSize = ROW_PADDING + value * HEIGHT_PER_ROW;
-      newScroller.scrollTop = topIndex * newItemSize;
+// Watch Table ID change
+watch(
+  () => resolvedTableId.value,
+  async (tableId) => {
+    if (!tableId) return;
+    const table = await reload();
+    if (table?.rowHeight !== undefined) {
+      rowHeight.value = normalizeRowHeight(table.rowHeight);
     }
-    updateHorizontalScroll();
-  });
+  },
+  { immediate: true }
+);
 
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-
-  work.updateTable(tableId, { rowHeight: value }).catch((e: any) => {
-    const message = e?.response?.data?.message ?? '保存行高失败';
-    showUpdateErrorToast(message);
-    rowHeight.value = previous;
-  });
-}
-
-function getFieldWidth(field: Field) {
-  const width = field.width;
-  if (typeof width === 'number' && Number.isFinite(width)) {
-    return Math.max(DEFAULT_FIELD_WIDTH, Math.round(width));
-  }
-  return DEFAULT_FIELD_WIDTH;
-}
-
-function getFieldOrderFromDom() {
-  const container = tableWrap.value;
-  if (!container) return [];
-  // Read the actual header order after drag/reorder.
-  const headers = Array.from(container.querySelectorAll<HTMLElement>('th[data-field-id]'));
-  const ids: string[] = [];
-  for (const header of headers) {
-    const fieldId = header.dataset.fieldId;
-    if (fieldId && !ids.includes(fieldId)) {
-      ids.push(fieldId);
-    }
-  }
-  return ids;
-}
-
-function showUpdateErrorToast(detail: string, summary = '更新失败') {
-  toast.add({
-    severity: 'error',
-    summary,
-    detail,
-    life: 3000,
-  });
-}
-
-async function persistFieldLayout(updates: Array<{ id: string; position?: number; width?: number; hidden?: boolean; frozen?: boolean }>) {
-  const tableId = resolvedTableId.value;
-  if (!tableId || updates.length === 0) return;
-  try {
-    // Persist layout to backend so refresh keeps the state.
-    await work.updateFieldLayout(tableId, updates);
-  } catch (error) {
-    console.error('Failed to update field layout', error);
-  }
-}
-
-// drag and drop
-const onColReorder = async (_event: DataTableColumnReorderEvent) => {
-  await nextTick();
-  const orderIds = getFieldOrderFromDom();
-  if (orderIds.length === 0) return;
-
-  // Sync store order with UI order, then persist positions.
-  const fieldMap = new Map(work.fields.map((field) => [field.id, field]));
-  const orderedVisible = orderIds.map((id) => fieldMap.get(id)).filter(Boolean) as Field[];
-  const visibleCount = work.fields.filter((field) => !field.hidden).length;
-  if (orderedVisible.length !== visibleCount) return;
-
-  const orderedFields: Field[] = [];
-  let visibleIndex = 0;
-  for (const field of work.fields) {
-    if (field.hidden) {
-      orderedFields.push(field);
-    } else {
-      orderedFields.push(orderedVisible[visibleIndex]);
-      visibleIndex += 1;
-    }
-  }
-  if (orderedFields.length !== work.fields.length) return;
-
-  orderedFields.forEach((field, index) => {
-    field.position = index;
-  });
-  work.fields = orderedFields;
-  await persistFieldLayout(
-    orderedFields.map((field, index) => ({ id: field.id, position: index }))
-  );
-  nextTick(updateHorizontalScroll);
-};
-
-const onColumnResizeEnd = async (event: DataTableColumnResizeEndEvent) => {
-  const header = event.element as HTMLElement | undefined;
-  const fieldId = header?.dataset?.fieldId;
-  if (!fieldId) return;
-  const field = work.fields.find((item) => item.id === fieldId);
-  if (!field) return;
-  // Use the actual header width so resize is saved as the user sees it.
-  const width = Math.max(100, Math.round(header.getBoundingClientRect().width));
-  const currentWidth = field.width;
-  if (currentWidth === width) return;
-  field.width = width;
-  await persistFieldLayout([{ id: fieldId, width }]);
-  nextTick(updateHorizontalScroll);
-};
 const onRowReorder = (event: DataTableRowReorderEvent) => {
   console.log('row reorder', event);
   work.records = event.value;
 };
 
-const loading = ref(false);
-const tableWrap = ref<HTMLDivElement | null>(null);
-const tableHeight = ref('');
-
-const updateTableHeight = () => {
-  const el = tableWrap.value;
-  if (!el) return;
-  const { top } = el.getBoundingClientRect();
-  const height = Math.max(0, window.innerHeight - top);
-  const nextHeight = `${Math.floor(height)}px`;
-  if (tableHeight.value !== nextHeight) {
-    tableHeight.value = nextHeight;
-  }
-  nextTick(updateHorizontalScroll);
-};
-
-const handleWindowResize = () => {
-  updateTableHeight();
-  updateFieldConfigMaxHeight();
-};
-
-const handleWindowScroll = () => {
-  updateFieldConfigMaxHeight();
-};
-
-onMounted(() => {
-  updateTableHeight();
-  updateFieldConfigMaxHeight();
-  window.addEventListener('resize', handleWindowResize);
-  window.addEventListener('scroll', handleWindowScroll, true);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleWindowResize);
-  window.removeEventListener('scroll', handleWindowScroll, true);
-});
-
-const rowMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
-const contextMenuRow = ref<RecordRow | null>(null);
-const insertAboveCount = ref(1);
-const insertBelowCount = ref(1);
-const rowMenuItems = computed<MenuItem[]>(() => {
-  const disabled = !contextMenuRow.value;
-  return [
-    { label: '向上插入', icon: 'pi pi-arrow-up', type: 'insert', direction: 'above', command: () => insertRows('above'), disabled },
-    { label: '向下插入', icon: 'pi pi-arrow-down', type: 'insert', direction: 'below', command: () => insertRows('below'), disabled },
-    { separator: true },
-    { label: '查看详情', icon: 'pi pi-info-circle', command: () => handleMenuAction('查看详情'), disabled },
-    { label: '添加子记录', icon: 'pi pi-sitemap', command: () => handleMenuAction('添加子记录'), disabled },
-    { label: '查看记录历史', icon: 'pi pi-history', command: () => handleMenuAction('查看记录历史'), disabled },
-    { label: '添加评论', icon: 'pi pi-comment', command: () => handleMenuAction('添加评论'), disabled },
-    { separator: true },
-    { label: '删除记录', icon: 'pi pi-trash', class: 'text-red-500', command: () => deleteContextRow(), disabled },
-  ];
-});
-
-function onRowContextMenu(event: DataTableRowContextMenuEvent) {
-  event.originalEvent.preventDefault();
-  insertAboveCount.value = 1;
-  insertBelowCount.value = 1;
-  contextMenuRow.value = event.data ?? null;
-  rowMenu.value?.show(event.originalEvent);
-}
-
-function normalizeInsertCount(value: unknown) {
-  const count = Math.floor(Number(value));
-  if (!Number.isFinite(count) || count < 1) return 1;
-  return Math.min(count, 100);
-}
-function getInsertCount(direction: 'above' | 'below') {
-  return direction === 'above' ? insertAboveCount.value : insertBelowCount.value;
-}
-function setInsertCount(direction: 'above' | 'below', value: unknown) {
-  const next = normalizeInsertCount(value);
-  if (direction === 'above') {
-    insertAboveCount.value = next;
-  } else {
-    insertBelowCount.value = next;
-  }
-  return next;
-}
-function onInsertInput(direction: 'above' | 'below', event: InputNumberInputEvent) {
-  const newValue = setInsertCount(direction, event?.value);
-  // Sync the input value to avoid PrimeVue InputNumber internal state desync
-  const target = event?.originalEvent?.target;
-  if (target instanceof HTMLInputElement) {
-    const nextValue = String(newValue);
-    if (target.value !== nextValue) {
-      target.value = nextValue;
-    }
-  }
-}
-
-// todo: optimize batch insert
-async function insertRows(direction: 'above' | 'below') {
-  const tableId = resolvedTableId.value;
-  const anchor = contextMenuRow.value;
-  if (!tableId || !anchor) return;
-  const count = normalizeInsertCount(getInsertCount(direction));
-  if (count < 1) return;
-  const anchorIndex = work.records.findIndex((record) => record.id === anchor.id);
-  if (anchorIndex < 0) return;
-  const insertIndex = direction === 'above' ? anchorIndex : anchorIndex + 1;
-
-  try {
-    const created: RecordRow[] = [];
-    for (let i = 0; i < count; i += 1) {
-      const { data } = await api.post('/records', { tableId, data: {} });
-      created.push(data as RecordRow);
-    }
-    work.records.splice(insertIndex, 0, ...created);
-    rowMenu.value?.hide?.();
-  } catch (e: any) {
-    showUpdateErrorToast(e?.response?.data?.message ?? '插入记录失败');
-  }
-}
-
-function handleMenuAction(label: string) {
-  if (!contextMenuRow.value) return;
-  console.info(`[Table] ${label}`, contextMenuRow.value);
-}
-
-async function deleteContextRow() {
-  const target = contextMenuRow.value;
-  if (!target) return;
-  await remove(target.id);
-  contextMenuRow.value = null;
-  rowMenu.value?.hide?.();
-}
-
-watch(
-  () => resolvedTableId.value,
-  async (tableId) => {
-    if (!tableId) return;
-    await reload();
-  },
-  { immediate: true }
-);
-
-async function reload() {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  loading.value = true;
-  try {
-    const table = await work.loadTable(tableId);
-    if (table?.rowHeight !== undefined) {
-      rowHeight.value = normalizeRowHeight(table.rowHeight);
-    }
-    await work.loadFields(tableId);
-    await work.loadRecords(tableId);
-    nextTick(updateHorizontalScroll);
-  } catch (e: any) {
-    showUpdateErrorToast(e?.response?.data?.message ?? '加载失败');
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function createRecord() {
-  const tableId = resolvedTableId.value;
-  if (!tableId) return;
-  
-  const initialData: Record<string, any> = {};
-  work.fields.forEach(field => {
-    const val = field.config?.defaultValue;
-    if (val !== undefined && val !== null && val !== '') {
-      initialData[field.id] = val;
-    }
-  });
-
-  await work.createRecord(tableId, initialData);
-}
-
-function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; type: string; value: any }) {
-  const { recordId, fieldId, type, value } = payload;
-
-  const record = work.records.find((item) => item.id === recordId);
-  if (!record) return;
-
-  const oldValue = record.data[fieldId];
-
-  // optimize: avoid unnecessary update
-  if (isEqual(oldValue, value)) {
-    return;
-  }
-
-  record.data[fieldId] = value;
-
-  queueRecordUpdate(recordId, async () => {
-    const current = work.records.find((item) => item.id === recordId);
-    if (!current) return;
-    try {
-      await work.patchRecord(recordId, current.revision, { [fieldId]: value });
-    } catch (e: any) {
-      if (e?.response?.status === 409) {
-        showUpdateErrorToast('数据已更新，请刷新后重试', '更新冲突');
-        await reload();
-        return;
-      }
-      showUpdateErrorToast(e?.response?.data?.message ?? '更新失败');
-    }
-  });
-}
-
-const attachmentPreviewPopover = ref();
-const previewFile = ref<any>(null);
-const hideTimer = ref<number | null>(null);
-
-function showAttachmentPreview(event: Event, file: any) {
-  clearHideTimer();
-  previewFile.value = file;
-  attachmentPreviewPopover.value.show(event);
-}
-
-function hideAttachmentPreview() {
-  hideTimer.value = window.setTimeout(() => {
-    attachmentPreviewPopover.value.hide();
-  }, 100);
-}
-
-function clearHideTimer() {
-  if (hideTimer.value) {
-    clearTimeout(hideTimer.value);
-    hideTimer.value = null;
-  }
-}
-
-async function remove(recordId: string) {
-  await work.deleteRecord(recordId);
-}
 </script>
 
 <style scoped>

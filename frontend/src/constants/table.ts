@@ -79,13 +79,20 @@ export const rowHeightOptions = [
   { value: 6, label: '超高', iconClass: 'pi-align-justify' },
 ] as const;
 
+export const STAT_NONE = 'none';
+export const STAT_COUNT_ALL = 'countAll';
+export const STAT_EMPTY = 'empty';
+export const STAT_FILLED = 'filled';
+export const STAT_PERCENT_EMPTY = 'percentEmpty';
+export const STAT_PERCENT_FILLED = 'percentFilled';
+
 export const statOptions = [
-  { label: '不展示', value: 'none' },
-  { label: '记录总数', value: 'countAll' },
-  { label: '未填写', value: 'empty' },
-  { label: '已填写', value: 'filled' },
-  { label: '未填写占比', value: 'percentEmpty' },
-  { label: '已填写占比', value: 'percentFilled' },
+  { label: '不展示', value: STAT_NONE },
+  { label: '记录总数', value: STAT_COUNT_ALL },
+  { label: '未填写', value: STAT_EMPTY },
+  { label: '已填写', value: STAT_FILLED },
+  { label: '未填写占比', value: STAT_PERCENT_EMPTY },
+  { label: '已填写占比', value: STAT_PERCENT_FILLED },
 ];
 
 const createFieldOptions = (label: string, types: Field['type'][]) => ({
