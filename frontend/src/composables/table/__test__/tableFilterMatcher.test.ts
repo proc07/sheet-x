@@ -7,7 +7,7 @@ import {
   OP_IS_NOT,
   OP_IS_NOT_EMPTY,
 } from '../../../constants/filter';
-import { checkFilterMatch, isEffectivelyEmpty } from '../tableFilterMatcher';
+import { checkFilterMatch, isEffectivelyEmpty } from '../filterMatcher';
 
 describe('isEffectivelyEmpty', () => {
   it('handles primitives', () => {

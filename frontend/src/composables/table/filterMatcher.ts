@@ -25,6 +25,7 @@ function _isObjectLike(value: any): value is Record<string, any> {
   return typeof value === 'object' && value !== null;
 }
 
+// 检查值是否为空或仅包含空格
 export function isEffectivelyEmpty(value: any): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim().length === 0;
@@ -37,6 +38,7 @@ export function isEffectivelyEmpty(value: any): boolean {
   return false;
 }
 
+// 将值转换为可搜索的字符串数组
 function _toSearchStrings(value: any): string[] {
   if (value === null || value === undefined) return [];
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -55,6 +57,7 @@ function _toSearchStrings(value: any): string[] {
   return [String(value)];
 }
 
+// 检查两个数组是否相等，忽略元素顺序
 export function areArraysEqualIgnoringOrder(a: any[], b: any[]): boolean {
   if (a.length !== b.length) return false;
   const visited = new Array(b.length).fill(false);
@@ -96,6 +99,7 @@ export function getEffectiveValues(value: any, filterValue: any, fieldType?: Fie
   return { effectiveValue: value, effectiveFilterValue: filterValue };
 }
 
+// 检查候选值是否包含 needle 字符串
 function _matchContains(candidate: any, needle: any): boolean {
   const needleStrings = _toSearchStrings(needle)
     .map(s => s.trim().toLowerCase())
@@ -115,6 +119,7 @@ function _matchContains(candidate: any, needle: any): boolean {
   return false;
 }
 
+// 检查候选值数组是否包含所有 needle 字符串
 function _arrayContainsAll(valueArr: any[], filterValue: any): boolean {
   const needles = Array.isArray(filterValue) ? filterValue : [filterValue];
   const activeNeedles = needles.filter(n => !isEffectivelyEmpty(n));
@@ -122,6 +127,7 @@ function _arrayContainsAll(valueArr: any[], filterValue: any): boolean {
   return activeNeedles.every(n => valueArr.some(v => _matchContains(v, n)));
 }
 
+// 检查候选值数组是否不包含所有 needle 字符串
 function _arrayDoesNotContainAll(valueArr: any[], filterValue: any): boolean {
   const needles = Array.isArray(filterValue) ? filterValue : [filterValue];
   const activeNeedles = needles.filter(n => !isEffectivelyEmpty(n));
@@ -132,12 +138,13 @@ function _arrayDoesNotContainAll(valueArr: any[], filterValue: any): boolean {
 export function checkFilterMatch(value: any, filter: FilterCondition, field?: Field): boolean {
   const { operator, value: filterValue } = filter;
   const { effectiveValue, effectiveFilterValue } = getEffectiveValues(value, filterValue, field?.type);
-
+  // 1.空值和非空值检测，只需要 value 即可
   if (operator === OP_IS_EMPTY) return isEffectivelyEmpty(effectiveValue);
   if (operator === OP_IS_NOT_EMPTY) return !isEffectivelyEmpty(effectiveValue);
-
+  // 2.空值和非空值检测，只需要 filterValue 即可
   if (isEffectivelyEmpty(effectiveFilterValue)) return true;
 
+  // 3.处理数组的情况
   if (Array.isArray(effectiveValue)) {
     if (operator === OP_IS || operator === OP_EQ) {
       if (Array.isArray(effectiveFilterValue)) {

@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import type { FilterCondition } from '../../types/table';
 import { useWorkStore } from '../../stores/work';
-import { checkFilterMatch } from './tableFilterMatcher';
+import { checkFilterMatch } from './filterMatcher';
 
 /**
  * 表格过滤：根据 filters 生成 filteredRecords，并提供记录索引映射。
