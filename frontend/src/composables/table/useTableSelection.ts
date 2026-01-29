@@ -2,7 +2,8 @@ import { ref, computed, type Ref } from 'vue';
 import type { MenuItem } from 'primevue/menuitem';
 import type { DataTableRowContextMenuEvent, DataTableSelectAllChangeEvent } from 'primevue/datatable';
 import type { InputNumberInputEvent } from 'primevue/inputnumber';
-import { useWorkStore, type RecordRow } from '../../stores/work';
+import type { RecordRow } from '../../types/table';
+import { useWorkStore } from '../../stores/work';
 import { useToast } from 'primevue/usetoast';
 
 interface SelectionActions {

@@ -52,4 +52,4 @@ export const OPERATORS = {
     { label: '是', value: OP_IS_TRUE },
     { label: '否', value: OP_IS_FALSE },
   ]
-};
+} as const;

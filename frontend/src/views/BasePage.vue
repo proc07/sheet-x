@@ -157,9 +157,10 @@
 
 <script setup lang="ts">
 import type { VNodeRef } from 'vue';
+import type { Table } from '../types/table';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useWorkStore, type Table } from '../stores/work';
+import { useWorkStore } from '../stores/work';
 import TablePage from './TablePage.vue';
 import { useConfirm } from 'primevue/useconfirm';
 

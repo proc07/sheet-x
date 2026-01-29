@@ -107,8 +107,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { rowHeightOptions, fieldTypeMeta } from '../constants/table';
-import type { Field } from '../stores/work';
-import TableFilter, { type FilterCondition } from './TableFilter.vue';
+import type { Field } from '../types/table';
+import type { FilterCondition } from '../types/table';
+import TableFilter from './TableFilter.vue';
 
 const props = defineProps<{
   fields: Field[];

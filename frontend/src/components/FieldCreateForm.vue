@@ -198,7 +198,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { fieldTypeOptions, fieldTypeMeta } from '../constants/table';
 import { useWorkStore } from '../stores/work';
-import type { Field } from '../stores/work';
+import type { Field, FieldType } from '../types/table';
 import {
   FIELD_TYPE_TEXT,
   FIELD_TYPE_NUMBER,
@@ -372,12 +372,12 @@ const currentTableFields = computed(() => work.fields);
 
 // Methods
 function getFieldTypeIcon(type: string) {
-  return fieldTypeMeta[type as Field['type']]?.icon;
+  return fieldTypeMeta[type as FieldType]?.icon;
 }
 
 function getFieldTypeLabel(type: string) {
   // simplified lookup
-  return fieldTypeMeta[type as Field['type']]?.label || type;
+  return fieldTypeMeta[type as FieldType]?.label || type;
 }
 
 function handleTypeChange() {

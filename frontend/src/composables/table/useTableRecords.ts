@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue';
-import { useWorkStore, type RecordRow } from '../../stores/work';
+import type { RecordRow } from '../../types/table';
+import { useWorkStore } from '../../stores/work';
 import { api } from '../../api';
 import { useToast } from 'primevue/usetoast';
 import isEqual from '../../utils/isEqual';

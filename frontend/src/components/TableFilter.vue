@@ -50,9 +50,9 @@
       />
 
       <!-- 3. Value Input (Dynamic) -->
-      <div class="flex-1">
+      <div class="w-41">
         <!-- No value needed for 'isEmpty' / 'isNotEmpty' -->
-        <div v-if="['isEmpty', 'isNotEmpty'].includes(filter.operator)" class="text-gray-400 text-sm italic px-2"></div>
+        <div v-if="isEmptyOperator(filter.operator)" class="text-gray-400 text-sm italic px-2"></div>
 
         <!-- Single Select Options -->
         <Select
@@ -138,7 +138,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { Field } from '../stores/work';
+import {OP_IS_EMPTY, OP_IS_NOT_EMPTY} from '../constants/filter'
+import type { Field, FilterCondition, OperatorType } from '../types/table';
 import {
   FIELD_TYPE_TEXT,
   FIELD_TYPE_NUMBER,
@@ -154,13 +155,6 @@ import isEqual from '../utils/isEqual';
 import deepClone from '../utils/deepClone';
 import { OPERATORS } from '../constants/filter';
 import { calculateAvailableHeight } from '../utils/dom';
-
-// Types
-export interface FilterCondition {
-  fieldId: string;
-  operator: string;
-  value: any;
-}
 
 const props = defineProps<{
   fields: Field[];
@@ -198,6 +192,10 @@ const fieldOptions = computed(() => {
 });
 
 // Helpers
+function isEmptyOperator(operator: string) {
+  return [OP_IS_EMPTY, OP_IS_NOT_EMPTY].includes(operator);
+}
+
 function getField(fieldId: string) {
   return props.fields.find(f => f.id === fieldId);
 }
@@ -218,26 +216,26 @@ function getFieldOptions(fieldId: string) {
   return field.config.options as Array<{ id: string; name: string }>;
 }
 
-function getOperators(fieldId: string) {
+function getOperators(fieldId: string): Array<{ label: string; value: OperatorType }> {
   const field = getField(fieldId);
   if (!field) return [];
 
   switch (field.type) {
     case FIELD_TYPE_ATTACHMENT:
-      return OPERATORS.file;
+      return [...OPERATORS.file];
     case FIELD_TYPE_DATE:
-      return OPERATORS.date;
+      return [...OPERATORS.date];
     case FIELD_TYPE_NUMBER:
-      return OPERATORS.number;
+      return [...OPERATORS.number];
     case FIELD_TYPE_CHECKBOX:
-      return OPERATORS.checkbox;
+      return [...OPERATORS.checkbox];
     case FIELD_TYPE_TEXT:
     case FIELD_TYPE_URL:
     case FIELD_TYPE_SINGLE_SELECT:
     case FIELD_TYPE_MULTI_SELECT:
-      return OPERATORS.default;
+      return [...OPERATORS.default];
     default:
-      return OPERATORS.default;
+      return [...OPERATORS.default];
   }
 }
 

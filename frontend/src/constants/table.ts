@@ -1,4 +1,4 @@
-import type { Field } from '../stores/work';
+import type { Field } from '../types/table';
 
 export const DEFAULT_FIELD_WIDTH = 150;
 export const HEIGHT_PER_ROW = 21;

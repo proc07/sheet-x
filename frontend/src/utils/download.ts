@@ -1,4 +1,4 @@
-import type { Attachment } from '../stores/work';
+import type { Attachment } from '../types/table';
 
 export function downloadFile(file: Attachment) {
   const a = document.createElement('a');

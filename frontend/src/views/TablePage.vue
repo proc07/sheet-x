@@ -284,8 +284,8 @@ import { computed, watch, type Ref, nextTick } from 'vue';
 import type { DataTableRowReorderEvent } from 'primevue/datatable';
 import { useRoute } from 'vue-router';
 import { Image } from 'primevue';
-
-import { useWorkStore, type RecordRow } from '../stores/work';
+import type { RecordRow } from '../types/table';
+import { useWorkStore } from '../stores/work';
 import TableToolbar from '../components/TableToolbar.vue';
 import CellRenderer from '../components/CellRenderer.vue';
 import CellEditor from '../components/CellEditor.vue';

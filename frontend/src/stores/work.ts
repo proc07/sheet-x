@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { api } from '../api';
+import type { Workspace, Base, Table, Field, RecordRow } from '../types/table';
 
 const WORKSPACE_STORAGE_KEY = 'workspace:lastSelectedId';
 
@@ -15,37 +16,6 @@ function persistWorkspaceId(id: string) {
   localStorage.removeItem(WORKSPACE_STORAGE_KEY);
 }
 
-export type Workspace = { id: string; name: string; createdAt: string };
-export type Base = { id: string; name: string; createdAt: string };
-export type Table = { id: string; name: string; createdAt: string; rowHeight?: number };
-export type Attachment = {
-  name: string;
-  type: string;
-  url: string;
-  size: number;
-  lastModified?: number;
-}
-
-export type UrlData = {
-  link: string;
-  text?: string;
-}
-
-export type Field = {
-  id: string;
-  name: string;
-  type: 'TEXT' | 'NUMBER' | 'DATE' | 'SINGLE_SELECT' | 'MULTI_SELECT' | 'USER' | 'ATTACHMENT'
-    | 'GROUP' | 'CHECKBOX' | 'URL' | 'FORMULA' | 'LOOKUP' // Routine
-    | 'WORKFLOW' | 'BUTTON' | 'AUTO_NUMBER' | 'PHONE' | 'EMAIL' | 'LOCATION' | 'BARCODE' | 'PROGRESS' | 'CURRENCY' | 'RATING' // Business
-    | 'LINK_BIDIRECTIONAL' | 'LINK_UNIDIRECTIONAL' | 'CREATED_BY' | 'UPDATED_BY' | 'CREATED_TIME' | 'UPDATED_TIME'; // Advanced
-  required: boolean;
-  config?: any;
-  position: number;
-  width?: number;
-  hidden?: boolean;
-  frozen?: boolean;
-};
-export type RecordRow = { id: string; data: Record<string, any>; revision: number };
 
 export const useWorkStore = defineStore('work', {
   state: () => ({

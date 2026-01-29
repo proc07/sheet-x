@@ -60,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Field, RecordRow, Attachment, UrlData } from '../stores/work';
+import type { Field, RecordRow, Attachment, UrlData } from '../types/table';
 import {
   HEIGHT_PER_ROW,
   formatDate,

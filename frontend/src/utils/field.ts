@@ -1,8 +1,8 @@
-import { fieldTypeMeta } from '../constants/table';
-import type { Attachment, Field } from '../stores/work';
+import { FIELD_TYPE_MULTI_SELECT, FIELD_TYPE_SINGLE_SELECT, fieldTypeMeta } from '../constants/table';
+import type { Attachment, Field } from '../types/table';
 
 export function defaultOptionsForField(type: Field['type']) {
-  if (type === 'SINGLE_SELECT' || type === 'MULTI_SELECT') {
+  if (type === FIELD_TYPE_SINGLE_SELECT || type === FIELD_TYPE_MULTI_SELECT) {
     return {
       choices: [
         { id: 'opt1', label: '选项1' },

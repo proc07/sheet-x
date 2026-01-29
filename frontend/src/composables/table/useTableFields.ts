@@ -1,7 +1,8 @@
 import { ref, computed, nextTick, watch, type Ref } from 'vue';
 import type { MenuItem } from 'primevue/menuitem';
-import type { DataTableColumnReorderEvent, DataTableColumnResizeEndEvent } from 'primevue/datatable';
-import { useWorkStore, type Field } from '../../stores/work';
+import type { DataTableColumnResizeEndEvent } from 'primevue/datatable';
+import type { Field } from '../../types/table';
+import { useWorkStore } from '../../stores/work';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { DEFAULT_FIELD_WIDTH } from '../../constants/table';
