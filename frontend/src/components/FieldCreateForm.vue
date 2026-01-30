@@ -146,7 +146,7 @@
     <div v-if="showDefaultValue" class="space-y-2">
       <div class="flex items-center gap-1">
         <div class="text-sm text-slate-500">默认值</div>
-        <i class="pi pi-info-circle text-xs text-slate-400"></i>
+        <i class="pi pi-info-circle text-xs text-slate-400" v-tooltip.top="{ value: '新添加记录时，自动填充默认值', pt: { root: { class: 'w-60' }, text: { class: 'text-xs leading-relaxed' } } }"></i>
       </div>
 
       <!-- Text Default -->
