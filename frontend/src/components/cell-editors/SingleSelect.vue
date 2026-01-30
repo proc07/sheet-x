@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, nextTick } from 'vue';
 import { Select } from 'primevue';
-import type { Field } from '../../stores/work';
+import type { Field } from '../../types/table';
 import { EDITOR_OVERLAY_CLASS, setupOverlayPropagation } from '../../utils/overlay';
 
 const props = defineProps<{

@@ -115,7 +115,7 @@ const props = defineProps<{
   fields: Field[];
   rowHeight: number;
   loading: boolean;
-  filters?: FilterCondition[];
+  filters: FilterCondition[];
 }>();
 
 const emit = defineEmits<{

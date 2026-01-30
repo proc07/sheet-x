@@ -4,6 +4,8 @@ import {
   OP_DOES_NOT_CONTAIN,
   OP_IS,
   OP_IS_EMPTY,
+  OP_IS_AFTER,
+  OP_IS_BEFORE,
   OP_IS_NOT,
   OP_IS_NOT_EMPTY,
 } from '../../../constants/filter';
@@ -92,3 +94,14 @@ describe('checkFilterMatch - URL normalization', () => {
   });
 });
 
+describe('checkFilterMatch - DATE normalization', () => {
+  it('normalizes ISO string and Date to comparable values', () => {
+    const field = { id: 'f1', name: 'date', type: 'DATE', required: false, position: 1, config: { format: 'YYYY/MM/DD' } } as any;
+    const iso = '2026-01-29T13:18:16.693Z';
+    const d = new Date(iso);
+
+    expect(checkFilterMatch(iso, { fieldId: 'f1', operator: OP_IS, value: d }, field)).toBe(true);
+    expect(checkFilterMatch(iso, { fieldId: 'f1', operator: OP_IS_BEFORE, value: new Date('2026-01-30T00:00:00.000Z') }, field)).toBe(true);
+    expect(checkFilterMatch(iso, { fieldId: 'f1', operator: OP_IS_AFTER, value: new Date('2026-01-01T00:00:00.000Z') }, field)).toBe(true);
+  });
+});

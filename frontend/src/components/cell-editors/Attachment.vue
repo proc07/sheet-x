@@ -116,7 +116,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, nextTick } from 'vue';
-import type { Attachment } from '../../stores/work';
+import type { Attachment } from '../../types/table';
 import { uploadFile } from '../../api';
 import { isImage, getFileIcon } from '../../utils/field';
 import { downloadFile } from '../../utils/download';

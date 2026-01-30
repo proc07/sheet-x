@@ -38,7 +38,11 @@
       </Select>
 
       <!-- 2. Operator Selector -->
+      <div v-if="getOperators(filter.fieldId)?.length === 1" class="w-30 text-sm text-center text-gray-700">
+        {{ getOperators(filter.fieldId)?.[0]?.label }}
+      </div>
       <Select
+        v-else
         v-model="filter.operator"
         :options="getOperators(filter.fieldId)"
         optionLabel="label"
@@ -50,11 +54,11 @@
       />
 
       <!-- 3. Value Input (Dynamic) -->
-      <div class="w-41">
+      <div class="w-41 flex justify-center items-center">
         <!-- No value needed for 'isEmpty' / 'isNotEmpty' -->
         <div v-if="isEmptyOperator(filter.operator)" class="text-gray-400 text-sm italic px-2"></div>
 
-        <!-- Single Select Options -->
+        <!-- Field: Single Select Options -->
         <Select
           v-else-if="isSingleSelectField(filter.fieldId)"
           v-model="filter.value"
@@ -67,7 +71,7 @@
           :scrollHeight="dynamicScrollHeight"
         />
 
-        <!-- Multi Select Options -->
+        <!-- Condition: Multi Selec Options -->
         <MultiSelect
           v-else-if="isMultiSelectField(filter.fieldId)"
           v-model="filter.value"
@@ -84,7 +88,7 @@
         <DatePicker
           v-else-if="isDateField(filter.fieldId)"
           v-model="filter.value"
-          dateFormat="yy-mm-dd"
+          v-bind="getDatePickerProps(getField(filter.fieldId)?.config?.format)"
           placeholder="选择日期"
           class="w-full"
           size="small"
@@ -97,9 +101,21 @@
           placeholder="输入数字"
           class="w-full"
           size="small"
-          :minFractionDigits="0"
-          :maxFractionDigits="4"
+          v-bind="getNumberInputProps(getField(filter.fieldId)?.config?.format)"
         />
+
+        <div
+          v-else-if="isCheckboxField(filter.fieldId)"
+          class="w-full h-full py-1 flex items-center justify-center border border-gray-300 rounded-md cursor-pointer"
+          @click="filter.value = !Boolean(filter.value)"
+        >
+          <Checkbox
+            v-model="filter.value"
+            binary
+            class="w-full"
+            @click.stop
+          />
+        </div>
 
         <!-- Text Input (Default) -->
         <InputText
@@ -150,15 +166,14 @@ import {
   FIELD_TYPE_URL,
   FIELD_TYPE_CHECKBOX
 } from '../constants/table';
-import { getFieldTypeIcon } from '../utils/field';
-import isEqual from '../utils/isEqual';
+import { getFieldTypeIcon, getDatePickerProps, getNumberInputProps } from '../utils/field';
 import deepClone from '../utils/deepClone';
 import { OPERATORS } from '../constants/filter';
 import { calculateAvailableHeight } from '../utils/dom';
 
 const props = defineProps<{
   fields: Field[];
-  modelValue?: FilterCondition[];
+  modelValue: FilterCondition[];
 }>();
 
 const emit = defineEmits(['update:modelValue']);
@@ -168,24 +183,19 @@ const filters = ref<FilterCondition[]>(props.modelValue ? deepClone(props.modelV
 const dynamicScrollHeight = ref('300px');
 const isHeightCalculated = ref(false);
 
+watch(filters, (newVal) => {
+  emit('update:modelValue', newVal);
+}, { deep: true });
+
+function commitModelValueUpdate() {
+  emit('update:modelValue', filters.value);
+}
+
 function onSelectTrigger(event: Event) {
   if (isHeightCalculated.value) return;
   dynamicScrollHeight.value = calculateAvailableHeight(event.currentTarget);
   isHeightCalculated.value = true;
 }
-
-// Sync with prop if it changes externally
-watch(() => props.modelValue, (newVal) => {
-  // Avoid infinite loop by comparing content
-  if (!isEqual(newVal, filters.value)) {
-    filters.value = newVal ? deepClone(newVal) : [];
-  }
-}, { deep: true });
-
-watch(filters, (newVal) => {
-  console.log('filters changed', newVal);
-  emit('update:modelValue', newVal);
-}, { deep: true });
 
 const fieldOptions = computed(() => {
   return props.fields.filter(f => !f.hidden);
@@ -204,11 +214,12 @@ function isFieldType(fieldId: string, type: string) {
   const field = getField(fieldId);
   return field?.type === type;
 }
-
+// Field type checkers
 const isSingleSelectField = (id: string) => isFieldType(id, FIELD_TYPE_SINGLE_SELECT);
 const isMultiSelectField = (id: string) => isFieldType(id, FIELD_TYPE_MULTI_SELECT);
 const isDateField = (id: string) => isFieldType(id, FIELD_TYPE_DATE);
 const isNumberField = (id: string) => isFieldType(id, FIELD_TYPE_NUMBER);
+const isCheckboxField = (id: string) => isFieldType(id, FIELD_TYPE_CHECKBOX);
 
 function getFieldOptions(fieldId: string) {
   const field = getField(fieldId);
@@ -235,7 +246,7 @@ function getOperators(fieldId: string): Array<{ label: string; value: OperatorTy
     case FIELD_TYPE_MULTI_SELECT:
       return [...OPERATORS.default];
     default:
-      return [...OPERATORS.default];
+      return [];
   }
 }
 

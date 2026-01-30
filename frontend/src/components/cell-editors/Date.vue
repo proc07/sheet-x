@@ -2,9 +2,7 @@
   <DatePicker
     v-model="local"
     size="small"
-    :dateFormat="calendarDateFormat"
-    :showTime="calendarShowTime"
-    hourFormat="24"
+    v-bind="datePickerProps"
     class="w-full h-full !absolute left-0 top-0"
     :panelClass="EDITOR_OVERLAY_CLASS"
     inputClass="w-full !rounded-none"
@@ -16,8 +14,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { DatePicker } from 'primevue';
-import type { Field } from '../../stores/work';
+import type { Field } from '../../types/table';
 import { EDITOR_OVERLAY_CLASS, setupOverlayPropagation } from '../../utils/overlay';
+import { getDatePickerProps } from '../../utils/field';
 
 const props = defineProps<{
   modelValue: string | Date | null | undefined;
@@ -42,22 +41,5 @@ function commit() {
   emit('commit');
 }
 
-// PrimeVue 的 Calendar (DatePicker) 使用了一套基于 jQuery UI Datepicker 的老式格式字符串（例如 yy 代表 4 位年份）
-// https://primevue.org/datepicker/#format
-const calendarDateFormat = computed(() => {
-  const fmt = props.field.config?.format;
-  if (!fmt) return 'yy-mm-dd';
-  // Extract date part (everything before the first space)
-  const datePart = fmt.split(' ')[0];
-  // Convert standard format (YYYY/MM/DD) to PrimeVue format (yy/mm/dd)
-  return datePart
-    .replace('YYYY', 'yy')
-    .replace('MM', 'mm')
-    .replace('DD', 'dd');
-});
-
-const calendarShowTime = computed(() => {
-  const fmt = props.field.config?.format;
-  return fmt ? fmt.includes('HH:mm') : false;
-});
+const datePickerProps = computed(() => getDatePickerProps(props.field.config?.format));
 </script>

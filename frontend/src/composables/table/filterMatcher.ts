@@ -15,9 +15,9 @@ import {
   OP_LTE,
   OP_IS_BEFORE,
   OP_IS_AFTER,
-  OP_IS_TRUE,
-  OP_IS_FALSE,
+  OP_IS_BOOLEAN,
 } from '../../constants/filter';
+import { FIELD_TYPE_DATE, FIELD_TYPE_URL } from '../../constants/table';
 
 type EffectiveValues = { effectiveValue: any; effectiveFilterValue: any };
 
@@ -28,6 +28,7 @@ function _isObjectLike(value: any): value is Record<string, any> {
 // 检查值是否为空或仅包含空格
 export function isEffectivelyEmpty(value: any): boolean {
   if (value === null || value === undefined) return true;
+  if (value instanceof Date) return Number.isNaN(value.getTime());
   if (typeof value === 'string') return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0 || value.every(isEffectivelyEmpty);
   if (_isObjectLike(value)) {
@@ -76,21 +77,32 @@ export function areArraysEqualIgnoringOrder(a: any[], b: any[]): boolean {
 }
 
 type FieldNormalizer = (value: any, filterValue: any) => EffectiveValues;
-
-function _normalizeUrl(value: any, filterValue: any): EffectiveValues {
-  let effectiveValue = value;
-  let effectiveFilterValue = filterValue;
-
-  if (_isObjectLike(effectiveValue) && 'link' in effectiveValue) effectiveValue = (effectiveValue as any).link;
-  if (_isObjectLike(effectiveFilterValue) && 'link' in effectiveFilterValue) {
-    effectiveFilterValue = (effectiveFilterValue as any).link;
-  }
-
-  return { effectiveValue, effectiveFilterValue };
-}
-
 const FIELD_NORMALIZERS: Partial<Record<Field['type'], FieldNormalizer>> = {
-  URL: _normalizeUrl,
+  [FIELD_TYPE_URL]: function _normalizeUrl(value: any, filterValue: any): EffectiveValues {
+    let effectiveValue = value;
+    let effectiveFilterValue = filterValue;
+
+    if (effectiveValue?.text) {
+      effectiveValue = effectiveValue.text;
+    }
+    if (effectiveFilterValue?.text) {
+      effectiveFilterValue = effectiveFilterValue.text;
+    }
+
+    return { effectiveValue, effectiveFilterValue };
+  },
+  [FIELD_TYPE_DATE]: (value: any, filterValue: any): EffectiveValues => {
+    const toTime = (v: any) => {
+      if (v instanceof Date) return v.getTime();
+      if (typeof v === 'string' || typeof v === 'number') {
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? v : d.getTime();
+      }
+      return v;
+    };
+
+    return { effectiveValue: toTime(value), effectiveFilterValue: toTime(filterValue) };
+  },
 };
 
 export function getEffectiveValues(value: any, filterValue: any, fieldType?: Field['type']): EffectiveValues {
@@ -159,10 +171,9 @@ export function checkFilterMatch(value: any, filter: FilterCondition, field?: Fi
     if (operator === OP_CONTAINS) return _arrayContainsAll(effectiveValue, effectiveFilterValue);
     if (operator === OP_DOES_NOT_CONTAIN) return _arrayDoesNotContainAll(effectiveValue, effectiveFilterValue);
   }
-
+console.log( effectiveValue, effectiveFilterValue)
   const strValue = String(effectiveValue).toLowerCase();
   const strFilter = String(effectiveFilterValue).toLowerCase();
-
   switch (operator) {
     case OP_IS:
       return strValue === strFilter;
@@ -188,12 +199,9 @@ export function checkFilterMatch(value: any, filter: FilterCondition, field?: Fi
       return new Date(effectiveValue) < new Date(effectiveFilterValue);
     case OP_IS_AFTER:
       return new Date(effectiveValue) > new Date(effectiveFilterValue);
-    case OP_IS_TRUE:
-      return effectiveValue === true;
-    case OP_IS_FALSE:
-      return effectiveValue === false;
+    case OP_IS_BOOLEAN:
+      return !!effectiveValue === effectiveFilterValue;
     default:
       return true;
   }
 }
-

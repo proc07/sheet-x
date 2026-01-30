@@ -37,3 +37,46 @@ export function getFileIcon(file: Attachment) {
   if (file.type.includes('zip') || file.type.includes('compressed')) return 'pi-box text-orange-500';
   return 'pi-file text-slate-500';
 }
+
+// PrimeVue 的 Calendar (DatePicker) 使用了一套基于 jQuery UI Datepicker 的老式格式字符串（例如 yy 代表 4 位年份）
+// https://primevue.org/datepicker/#format
+function toDatePickerFormat(fmt?: string) {
+  if (!fmt) return 'yy-mm-dd';
+  const datePart = fmt.split(' ')[0].replace('(z)', '').trim();
+  return datePart
+    .replaceAll('YYYY', 'yy')
+    .replaceAll('MM', 'mm')
+    .replaceAll('DD', 'dd');
+}
+
+export function getDatePickerProps(fmt?: string) {
+  return {
+    dateFormat: toDatePickerFormat(fmt),
+    showTime: Boolean(fmt && fmt.includes('HH:mm')),
+    hourFormat: '24' as const,
+  };
+}
+
+export function getNumberInputProps(fmt?: string) {
+  if (!fmt || fmt === 'integer') {
+    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: false };
+  }
+  if (fmt === 'thousands') {
+    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: true };
+  }
+  if (fmt === 'thousands-decimal') {
+    return { useGrouping: true };
+  }
+  if (fmt === 'percent') {
+    return { suffix: '%' };
+  }
+  if (fmt === 'percent-decimal') {
+    return { suffix: '%', minFractionDigits: 2, maxFractionDigits: 2 };
+  }
+  if (fmt.startsWith('decimal-')) {
+    const digits = Number.parseInt(fmt.split('-')[1], 10);
+    if (!Number.isFinite(digits) || digits < 0) return {};
+    return { minFractionDigits: digits, maxFractionDigits: digits, useGrouping: false };
+  }
+  return {};
+}

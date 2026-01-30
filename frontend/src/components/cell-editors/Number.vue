@@ -13,7 +13,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted } from 'vue';
 import { InputNumber } from 'primevue';
-import type { Field } from '../../stores/work';
+import type { Field } from '../../types/table';
+import { getNumberInputProps } from '../../utils/field';
 
 const props = defineProps<{
   modelValue: number | string | null | undefined;
@@ -43,26 +44,6 @@ function commit() {
 }
 
 const numberFieldProps = computed(() => {
-  const fmt = props.field.config?.format;
-  if (!fmt || fmt === 'integer') {
-    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: false };
-  }
-  if (fmt === 'thousands') {
-    return { minFractionDigits: 0, maxFractionDigits: 0, useGrouping: true };
-  }
-  if (fmt === 'thousands-decimal') {
-    return { useGrouping: true };
-  }
-  if (fmt === 'percent') {
-    return { suffix: '%' };
-  }
-  if (fmt === 'percent-decimal') {
-    return { suffix: '%', minFractionDigits: 2 }; 
-  }
-  if (fmt.startsWith('decimal-')) {
-    const digits = parseInt(fmt.split('-')[1], 10);
-    return { minFractionDigits: digits, maxFractionDigits: digits, useGrouping: false };
-  }
-  return {};
+  return getNumberInputProps(props.field.config?.format);
 });
 </script>

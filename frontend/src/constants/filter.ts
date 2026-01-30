@@ -15,8 +15,7 @@ export const OP_LTE = '<=';
 export const OP_IS_BEFORE = 'isBefore';
 export const OP_IS_AFTER = 'isAfter';
 
-export const OP_IS_TRUE = 'isTrue';
-export const OP_IS_FALSE = 'isFalse';
+export const OP_IS_BOOLEAN = 'isBoolean';
 
 export const OPERATORS = {
   default: [
@@ -49,7 +48,6 @@ export const OPERATORS = {
     { label: '不为空', value: OP_IS_NOT_EMPTY },
   ],
   checkbox: [
-    { label: '是', value: OP_IS_TRUE },
-    { label: '否', value: OP_IS_FALSE },
+    { label: '等于', value: OP_IS_BOOLEAN },
   ]
 } as const;
