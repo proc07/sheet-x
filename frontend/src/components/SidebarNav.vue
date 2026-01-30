@@ -9,6 +9,7 @@
         :class="itemClass(item)"
         :title="collapsed ? item.label : undefined"
         @click="handleItemClick(item)"
+        @mouseenter="onItemMouseEnter($event, item)"
       >
         <i :class="item.icon" class="text-base"></i>
         <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
@@ -36,9 +37,15 @@
       </div>
     </div>
   </div>
+
+  <Menu ref="hoverMenu" :model="hoverMenuModel" :popup="true" />
 </template>
 
 <script setup lang="ts">
+import { ref, computed, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
+import Menu from 'primevue/menu';
+
 defineOptions({ name: 'SidebarNav' });
 
 type NavItem = {
@@ -60,6 +67,51 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'toggle', id: string): void;
 }>();
+
+const router = useRouter();
+const hoverMenu = ref();
+const hoverItem = ref<NavItem | null>(null);
+
+const hoverMenuModel = computed(() => {
+  if (!hoverItem.value) return [];
+  const item = hoverItem.value;
+  // If has children, show children. Otherwise show itself (e.g. for label tooltip purpose or single action)
+  const source = item.children && item.children.length > 0 ? item.children : [item];
+  
+  return source.map(child => ({
+    label: child.label,
+    icon: child.icon,
+    command: () => {
+      if (child.to) {
+        router.push(child.to);
+      } else if (child.children) {
+        // If clicking a parent in menu, maybe expand it? 
+        // But here we just navigate or do nothing.
+        emit('toggle', child.id);
+      }
+    }
+  }));
+});
+
+function onItemMouseEnter(event: MouseEvent, item: NavItem) {
+  if (!props.collapsed) return;
+  
+  hoverItem.value = item;
+  const target = event.currentTarget as HTMLElement;
+  
+  // Show menu
+  hoverMenu.value?.show(event);
+  
+  // Manually align to Right-Top
+  nextTick(() => {
+    const menuEl = hoverMenu.value?.container;
+    if (menuEl && target) {
+      const rect = target.getBoundingClientRect();
+      menuEl.style.left = `${rect.right + 4}px`; // 4px gap
+      menuEl.style.top = `${rect.top}px`;
+    }
+  });
+}
 
 function isExpanded(id: string) {
   return props.expandedKeys.has(id);

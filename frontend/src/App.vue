@@ -3,7 +3,7 @@
     <Toast position="top-right" />
     <div v-if="showShell" class="flex min-h-screen">
       <aside
-        class="hidden flex-col border-r border-slate-200/70 bg-white/70 py-4 backdrop-blur lg:flex dark:border-slate-800/70 dark:bg-slate-900/70"
+        class="flex flex-col border-r border-slate-200/70 bg-white/70 py-4 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70"
         :class="sidebarCollapsed ? 'w-20 px-3' : 'w-64 px-4'"
       >
         <div class="relative mb-5 flex items-start justify-between gap-2 slide-in">
