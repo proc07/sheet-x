@@ -161,7 +161,7 @@ import type { Table } from '../types/table';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useWorkStore } from '../stores/work';
-import TablePage from './TablePage.vue';
+import TablePage from './Table.vue';
 import { useConfirm } from 'primevue/useconfirm';
 
 const confirm = useConfirm();

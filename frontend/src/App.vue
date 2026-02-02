@@ -127,6 +127,7 @@
                     :key="item.id"
                     type="button"
                     class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70"
+                    @click="onCreateItem(item.id)"
                   >
                     <i :class="[item.icon, item.color]" class="text-lg w-5 inline-flex justify-center"></i>
                     <span class="truncate">{{ item.label }}</span>
@@ -177,6 +178,24 @@
           </div>
         </main>
       </div>
+
+      <Dialog v-model:visible="createBaseVisible" modal header="新建 Base" :style="{ width: '420px' }">
+        <div class="flex flex-col gap-3">
+          <div class="text-sm text-slate-600">在当前工作空间创建一个新的 Base</div>
+          <InputText
+            v-model="newBaseName"
+            placeholder="输入 Base 名称"
+            autofocus
+            @keydown.enter.prevent="submitBaseCreate"
+          />
+        </div>
+        <template #footer>
+          <div class="flex items-center justify-end gap-2">
+            <Button label="取消" text severity="secondary" @click="createBaseVisible = false" />
+            <Button label="创建" :loading="creatingBase" @click="submitBaseCreate" />
+          </div>
+        </template>
+      </Dialog>
     </div>
 
     <div v-else class="min-h-screen flex items-center justify-center px-4">
@@ -193,11 +212,13 @@ import { useAuthStore } from './stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarNav from './components/SidebarNav.vue';
 import { useWorkStore } from './stores/work';
+import { useToast } from 'primevue/usetoast';
 
 const auth = useAuthStore();
 const work = useWorkStore();
 const router = useRouter();
 const route = useRoute();
+const toast = useToast();
 const search = ref('');
 const sidebarCollapsed = ref(false);
 const expandedNav = ref(new Set<string>(['tables']));
@@ -268,7 +289,7 @@ const secondaryNav: NavItem[] = [
   { id: 'shortcuts-orders', label: '订单表', icon: 'pi pi-list' },
   { id: 'shortcuts-dashboard', label: '仪表盘 2', icon: 'pi pi-chart-bar' },
 ];
-const createExpanded = ref(false);
+const createExpanded = ref(true);
 const createItems = [
   { id: 'create-import-excel', label: '导入 Excel', icon: 'pi pi-file-excel', color: 'text-emerald-600' },
   { id: 'create-table', label: '数据表', icon: 'pi pi-table', color: 'text-violet-500' },
@@ -278,6 +299,9 @@ const createItems = [
   { id: 'create-doc', label: '文档', icon: 'pi pi-file', color: 'text-sky-500' },
   { id: 'create-folder', label: '文件夹', icon: 'pi pi-folder', color: 'text-indigo-500' },
 ];
+const createBaseVisible = ref(false);
+const newBaseName = ref('');
+const creatingBase = ref(false);
 
 const pageTitle = computed(() => {
   if (route.path.startsWith('/tables')) return '表格视图';
@@ -328,6 +352,40 @@ function toggleDarkMode() {
 
 function toggleCreateMenu() {
   createExpanded.value = !createExpanded.value;
+}
+
+function openCreateBase() {
+  if (!work.currentWorkspaceId) {
+    toast.add({ severity: 'warn', summary: '无法创建', detail: '请先选择一个 Workspace', life: 1500 });
+    return;
+  }
+  newBaseName.value = '';
+  createBaseVisible.value = true;
+}
+
+async function submitBaseCreate() {
+  const name = newBaseName.value.trim();
+  const workspaceId = work.currentWorkspaceId;
+  if (!workspaceId || !name || creatingBase.value) return;
+  creatingBase.value = true;
+  try {
+    const created = await work.createBase(workspaceId, name);
+    createBaseVisible.value = false;
+    createExpanded.value = false;
+    await router.push(`/workspaces/${workspaceId}/bases/${created.id}`);
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: '创建失败', detail: e?.response?.data?.message ?? '创建失败' });
+  } finally {
+    creatingBase.value = false;
+  }
+}
+
+function onCreateItem(id: string) {
+  if (id === 'create-table') {
+    openCreateBase();
+    return;
+  }
+  toast.add({ severity: 'info', summary: '暂未实现', detail: '该功能还在开发中', life: 1200 });
 }
 
 watch(
