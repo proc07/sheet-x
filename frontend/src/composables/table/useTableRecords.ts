@@ -31,6 +31,7 @@ export function useTableRecords(tableId: Ref<string>, callbacks?: TableRecordsCa
     if (!tableId.value) return;
     loading.value = true;
     try {
+      await work.loadTableAcl(tableId.value);
       const table = await work.loadTable(tableId.value);
       await work.loadFields(tableId.value);
       await work.loadRecords(tableId.value);
@@ -43,8 +44,40 @@ export function useTableRecords(tableId: Ref<string>, callbacks?: TableRecordsCa
     }
   }
 
+  function canCreateRecordInTable() {
+    const acl = work.tableAclById[tableId.value];
+    if (!acl) return true;
+    if (acl.tablePermission === 'NONE') return false;
+    if (acl.tablePermission === 'READ') return false;
+    return !!acl.record?.canCreate;
+  }
+
+  function canDeleteRecordInTable() {
+    const acl = work.tableAclById[tableId.value];
+    if (!acl) return true;
+    if (acl.tablePermission === 'NONE') return false;
+    if (acl.tablePermission === 'READ') return false;
+    return !!acl.record?.canDelete;
+  }
+
+  function isFieldEditable(fieldId: string) {
+    const acl = work.tableAclById[tableId.value];
+    if (!acl) return true;
+    if (acl.tablePermission === 'MANAGE') return true;
+    if (acl.tablePermission !== 'EDIT') return false;
+    const mode = acl.fields?.mode ?? 'ALL';
+    if (mode === 'ALL') return true;
+    const perm = acl.fields?.permsByFieldId?.[fieldId];
+    if (!perm) return true;
+    return perm.canEdit !== false;
+  }
+
   async function createRecord() {
     if (!tableId.value) return;
+    if (!canCreateRecordInTable()) {
+      toast.add({ severity: 'warn', summary: '无权限', detail: '当前角色不允许新增记录', life: 1500 });
+      return;
+    }
     
     const initialData: Record<string, any> = {};
     work.fields.forEach(field => {
@@ -58,11 +91,19 @@ export function useTableRecords(tableId: Ref<string>, callbacks?: TableRecordsCa
   }
 
   async function deleteRecord(recordId: string) {
+    if (!canDeleteRecordInTable()) {
+      toast.add({ severity: 'warn', summary: '无权限', detail: '当前角色不允许删除记录', life: 1500 });
+      return;
+    }
     await work.deleteRecord(recordId);
   }
 
   async function insertRows(direction: 'above' | 'below', count: number, anchor: RecordRow) {
     if (!tableId.value || !anchor || count < 1) return;
+    if (!canCreateRecordInTable()) {
+      toast.add({ severity: 'warn', summary: '无权限', detail: '当前角色不允许新增记录', life: 1500 });
+      return;
+    }
     
     const anchorIndex = work.records.findIndex((record) => record.id === anchor.id);
     if (anchorIndex < 0) return;
@@ -84,6 +125,11 @@ export function useTableRecords(tableId: Ref<string>, callbacks?: TableRecordsCa
 
   // Cell Editing
   function onCellEditInit(event: DataTableCellEditInitEvent<RecordRow>) {
+    const fieldId = String((event as any)?.field ?? '');
+    if (fieldId && !isFieldEditable(fieldId)) {
+      (event as any)?.originalEvent?.preventDefault?.();
+      return;
+    }
     editingRowId.value = event.data?.id ?? null;
   }
 
@@ -115,6 +161,7 @@ export function useTableRecords(tableId: Ref<string>, callbacks?: TableRecordsCa
 
   function onUpdateCell(payload: { recordId: string; revision: number; fieldId: string; type: string; value: any }) {
     const { recordId, fieldId, value } = payload;
+    if (!isFieldEditable(fieldId)) return;
 
     const record = work.records.find((item) => item.id === recordId);
     if (!record) return;

@@ -1,6 +1,6 @@
 import { ref, watch, type Ref } from 'vue';
 import { useWorkStore } from '../../stores/work';
-import { getBatchTableStats } from '../../api';
+import { getBatchTableStats } from '../../services/table';
 import {
   statOptions,
   STAT_NONE,

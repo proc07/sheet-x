@@ -102,6 +102,14 @@
             <i class="pi pi-plus"></i>
           </button>
         </div>
+        <Button
+          icon="pi pi-shield"
+          text
+          rounded
+          size="small"
+          aria-label="高级权限"
+          @click="advancedPermissionVisible = true"
+        />
       </div>
 
       <div v-if="activeTable" class="flex-1 min-h-0 overflow-hidden bg-white">
@@ -152,6 +160,12 @@
 
     <ConfirmDialog />
     <Menu ref="tableMenu" :model="tableMenuItems" popup />
+
+    <AdvancedPermissionDialog
+      v-model:visible="advancedPermissionVisible"
+      :base-id="baseId"
+      :workspace-id="workspaceId"
+    />
   </div>
 </template>
 
@@ -163,6 +177,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useWorkStore } from '../stores/work';
 import TablePage from './Table.vue';
 import { useConfirm } from 'primevue/useconfirm';
+import AdvancedPermissionDialog from '../components/AdvancedPermissionDialog/index.vue';
 
 const confirm = useConfirm();
 
@@ -171,6 +186,7 @@ const router = useRouter();
 const work = useWorkStore();
 
 const baseId = computed(() => (route.params.baseId as string) || '');
+const workspaceId = computed(() => (route.params.workspaceId as string) || '');
 const tableIdFromQuery = computed(() => {
   const queryValue = route.query.table;
   if (Array.isArray(queryValue)) return queryValue[0] ?? '';
@@ -192,6 +208,7 @@ const editingName = ref('');
 const editingOriginalName = ref('');
 const editingInput = ref<HTMLInputElement | null>(null);
 const editingSaving = ref(false);
+const advancedPermissionVisible = ref(false);
 
 onMounted(async () => {
   await reload();

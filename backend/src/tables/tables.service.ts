@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdvancedPermissionsService } from '../advanced-permissions/advanced-permissions.service';
 import { CreateTableDto, UpdateTableDto } from './dto';
 
 @Injectable()
 export class TablesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private advancedPermissions: AdvancedPermissionsService
+  ) {}
 
   private async assertBaseReadable(userId: string, baseId: string) {
     const base = await this.prisma.base.findUnique({
@@ -33,11 +37,13 @@ export class TablesService {
 
   async list(userId: string, baseId: string) {
     await this.assertBaseReadable(userId, baseId);
-    return this.prisma.table.findMany({
+    const tables = await this.prisma.table.findMany({
       where: { baseId },
       select: { id: true, name: true, rowHeight: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
+    const perms = await Promise.all(tables.map((t) => this.advancedPermissions.getEffectiveTablePermission(userId, t.id)));
+    return tables.filter((t, idx) => perms[idx]?.tablePermission !== 'NONE');
   }
 
   async get(userId: string, tableId: string) {
@@ -47,6 +53,8 @@ export class TablesService {
     });
     if (!table) throw new ForbiddenException('Table not found');
     await this.assertBaseReadable(userId, table.baseId);
+    const perm = await this.advancedPermissions.getEffectiveTablePermission(userId, tableId);
+    if (perm.tablePermission === 'NONE') throw new ForbiddenException('No permission');
 
     return table;
   }

@@ -8,6 +8,9 @@ import { FieldsModule } from './fields/fields.module';
 import { RecordsModule } from './records/records.module';
 import { ViewsModule } from './views/views.module';
 import { StorageModule } from './storage/storage.module';
+import { AdvancedPermissionsModule } from './advanced-permissions/advanced-permissions.module';
+import { AuditModule } from './audit/audit.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { StorageModule } from './storage/storage.module';
     RecordsModule,
     ViewsModule,
     StorageModule,
+    AuditModule,
+    AdvancedPermissionsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

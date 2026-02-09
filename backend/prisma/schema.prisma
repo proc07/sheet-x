@@ -9,6 +9,7 @@ datasource db {
 
 enum WorkspaceRole {
   OWNER
+  ADMIN
   EDITOR
   VIEWER
 }
@@ -55,11 +56,15 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   name         String?
+  avatarUrl    String?
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships  WorkspaceMember[]
+  memberships    WorkspaceMember[]
+  auditLogs      AuditLog[]        @relation("AuditLogActor")
+  createdRecords Record[]          @relation("RecordCreatedBy")
+  updatedRecords Record[]          @relation("RecordUpdatedBy")
 }
 
 model Workspace {
@@ -68,19 +73,19 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members   WorkspaceMember[]
-  bases     Base[]
+  members WorkspaceMember[]
+  bases   Base[]
 }
 
 model WorkspaceMember {
-  id          String         @id @default(uuid())
+  id          String        @id @default(uuid())
   workspaceId String
   userId      String
-  role        WorkspaceRole  @default(EDITOR)
-  createdAt   DateTime       @default(now())
+  role        WorkspaceRole @default(EDITOR)
+  createdAt   DateTime      @default(now())
 
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -94,10 +99,26 @@ model Base {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  tables      Table[]
+  workspace          Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tables             Table[]
+  advancedPermission BaseAdvancedPermission?
 
   @@index([workspaceId])
+}
+
+model BaseAdvancedPermission {
+  id              String   @id @default(uuid())
+  baseId          String   @unique
+  // 是否开启高级权限
+  enabled         Boolean  @default(false)
+  // 是否允许分享时授予权限
+  allowShareGrant Boolean  @default(true)
+  // 高级权限的配置，BaseAdvancedPermissionConfig
+  config          Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  base Base @relation(fields: [baseId], references: [id], onDelete: Cascade)
 }
 
 model Table {
@@ -108,30 +129,30 @@ model Table {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  base      Base     @relation(fields: [baseId], references: [id], onDelete: Cascade)
-  fields    Field[]
-  views     View[]
-  records   Record[]
+  base    Base     @relation(fields: [baseId], references: [id], onDelete: Cascade)
+  fields  Field[]
+  views   View[]
+  records Record[]
 
   @@index([baseId])
 }
 
 model Field {
-  id        String    @id @default(uuid())
-  tableId   String
-  name      String
-  type      FieldType
-  required  Boolean   @default(false)
-  config   Json?     // e.g. select options: {choices:[{id,label,color?}]}
-  position  Int       @default(0)
-  width     Int?      @default(150)
-  hidden    Boolean   @default(false)
-  frozen    Boolean   @default(false)
+  id       String    @id @default(uuid())
+  tableId  String
+  name     String
+  type     FieldType
+  required Boolean   @default(false)
+  config   Json? // e.g. select options: {choices:[{id,label,color?}]}
+  position Int       @default(0)
+  width    Int?      @default(150)
+  hidden   Boolean   @default(false)
+  frozen   Boolean   @default(false)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  table     Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@index([tableId])
 }
@@ -141,26 +162,54 @@ model View {
   tableId   String
   name      String
   type      ViewType @default(GRID)
-  config    Json?    // {visibleFieldIds:[], sort:[...], filter:[...], groupBy:...}
+  // 视图的配置，例如可见字段、排序、过滤、分组等
+  config    Json? // {visibleFieldIds:[], sort:[...], filter:[...], groupBy:...}
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  table     Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@index([tableId])
 }
 
 model Record {
-  id        String   @id @default(uuid())
-  tableId   String
-  data      Json     @default("{}")
-  revision  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  id              String    @id @default(uuid())
+  tableId         String
+  data            Json      @default("{}")
+  // 记录的版本号，从 1 开始递增，每次更新记录时 revision 加 1
+  revision        Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  createdByUserId String?
+  updatedByUserId String?
 
   table     Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("RecordCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("RecordUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   @@index([tableId])
   @@index([deletedAt])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+}
+
+// 审计日志
+model AuditLog {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  workspaceId String?
+  baseId      String?
+  data        Json?
+
+  actor User? @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorUserId])
+  @@index([workspaceId])
+  @@index([baseId])
 }

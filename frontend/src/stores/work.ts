@@ -26,6 +26,7 @@ export const useWorkStore = defineStore('work', {
     tables: [] as Table[],
     fields: [] as Field[],
     records: [] as RecordRow[],
+    tableAclById: {} as Record<string, any>,
   }),
   actions: {
     async loadWorkspaces() {
@@ -169,5 +170,15 @@ export const useWorkStore = defineStore('work', {
       await api.delete(`/records/${recordId}`);
       this.records = this.records.filter(r => r.id !== recordId);
     },
+
+    // 加载表格权限
+    async loadTableAcl(tableId: string) {
+      if (!tableId) return null;
+      const { data } = await api.get(`/advanced-permissions/tables/${tableId}/me`);
+      console.log('loadTableAcl', data)
+      this.tableAclById[tableId] = data;
+      return data;
+    },
+
   },
 });

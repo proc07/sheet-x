@@ -117,7 +117,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, nextTick } from 'vue';
 import type { Attachment } from '../../types/table';
-import { uploadFile } from '../../api';
+import { uploadFile } from '../../services/upload';
 import { isImage, getFileIcon } from '../../utils/field';
 import { downloadFile } from '../../utils/download';
 import { EDITOR_OVERLAY_CLASS } from '../../utils/overlay';

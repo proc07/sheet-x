@@ -1,11 +1,15 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { Field, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdvancedPermissionsService } from '../advanced-permissions/advanced-permissions.service';
 import { CreateFieldDto, UpdateFieldDto, UpdateFieldLayoutDto } from './dto';
 
 @Injectable()
 export class FieldsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private advancedPermissions: AdvancedPermissionsService
+  ) {}
 
   private async assertTableWrite(userId: string, tableId: string) {
     const table = await this.prisma.table.findUnique({
@@ -19,6 +23,9 @@ export class FieldsService {
       select: { role: true },
     });
     if (!m || m.role === 'VIEWER') throw new ForbiddenException('No write permission');
+
+    const perm = await this.advancedPermissions.getEffectiveTablePermission(userId, tableId);
+    if (perm.enabled && perm.tablePermission !== 'MANAGE') throw new ForbiddenException('No manage permission');
   }
 
   private async assertTableReadable(userId: string, tableId: string) {
@@ -37,11 +44,13 @@ export class FieldsService {
 
   async list(userId: string, tableId: string) {
     await this.assertTableReadable(userId, tableId);
-    return this.prisma.field.findMany({
+    const fields = await this.prisma.field.findMany({
       where: { tableId },
       select: { id: true, name: true, type: true, required: true, config: true, position: true, width: true, hidden: true, frozen: true },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
+    const perm = await this.advancedPermissions.getEffectiveTablePermission(userId, tableId);
+    return this.advancedPermissions.filterFields(perm, fields);
   }
 
   private async assertFieldWrite(userId: string, fieldId: string) {

@@ -2,12 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './stores/auth';
 import { useWorkStore } from './stores/work';
 import LoginPage from './views/Login.vue';
+import HomePage from './views/Home.vue';
 import BasePage from './views/Base.vue';
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', component: LoginPage },
+    { path: '/', component: HomePage },
     { path: '/workspaces/:workspaceId/bases/:baseId?', component: BasePage },
   ],
 });
@@ -18,7 +20,7 @@ router.beforeEach(async (to) => {
 
   const wid = typeof to.params.workspaceId === 'string' ? to.params.workspaceId : '';
   const baseId = typeof to.params.baseId === 'string' ? to.params.baseId : '';
-  if (wid && !baseId && /^\/workspaces\/[^/]+\/bases\/?$/.test(to.path)) {
+  if (wid && !baseId) {
     const work = useWorkStore();
     if (work.currentWorkspaceId !== wid) {
       work.setCurrentWorkspace(wid);
