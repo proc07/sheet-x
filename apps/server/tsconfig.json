@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "commonjs",
     "declaration": false,
@@ -9,9 +10,12 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": ".",
+    "paths": {
+      "@sheet-x/types": ["../../packages/types/src/index.ts"],
+      "@sheet-x/types/*": ["../../packages/types/src/*"]
+    },
     "incremental": true,
-    "skipLibCheck": true,
-    "strict": true
+    "skipLibCheck": true
   }
 }

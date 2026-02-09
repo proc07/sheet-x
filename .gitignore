@@ -1,6 +1,7 @@
 node_modules/
 dist/
-backend/uploads/
+apps/server/uploads/
+.turbo/
 
 .DS_Store
 .vscode/

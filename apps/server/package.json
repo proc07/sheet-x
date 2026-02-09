@@ -2,19 +2,26 @@
   "name": "sheet-x-backend",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
   "scripts": {
+    "postinstall": "prisma generate",
     "start": "nest start",
+    "dev": "nest start --watch",
     "start:dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@sheet-x/types": "workspace:*",
     "@aws-sdk/client-s3": "^3.972.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",

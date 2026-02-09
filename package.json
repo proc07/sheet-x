@@ -1,0 +1,18 @@
+{
+  "name": "sheet-x",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

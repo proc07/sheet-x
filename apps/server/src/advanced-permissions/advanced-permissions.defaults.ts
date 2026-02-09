@@ -1,4 +1,5 @@
 import type { BaseAdvancedPermissionConfig, BaseRole, PermissionLevel, TablePerm } from './advanced-permissions.types';
+import type { SystemRoleKey, WorkspaceRole } from '@sheet-x/types';
 
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -127,9 +128,6 @@ export function normalizeConfig(raw: any): BaseAdvancedPermissionConfig {
   ensureSystemRole(defaultViewerSystemRole());
   return cfg;
 }
-
-export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER';
-export type SystemRoleKey = Exclude<BaseRole['key'], undefined>;
 
 export function workspaceRoleToSystemRoleKey(workspaceRole: WorkspaceRole): SystemRoleKey {
   if (workspaceRole === 'OWNER') return 'owner';

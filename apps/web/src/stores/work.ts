@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { api } from '../api';
 import type { Workspace, Base, Table, Field, RecordRow } from '../types/table';
+export type { Workspace, Base, Table, Field, RecordRow } from '../types/table';
 
 const WORKSPACE_STORAGE_KEY = 'workspace:lastSelectedId';
 

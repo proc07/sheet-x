@@ -25,11 +25,9 @@
 ### 2) 启动后端
 
 ```bash
-cd backend
-cp .env.example .env
-npm i
-npx prisma migrate dev --name init
-npm run start:dev
+pnpm install
+pnpm --filter sheet-x-backend prisma:migrate
+pnpm --filter sheet-x-backend dev
 ```
 
 后端默认：`http://localhost:3000`
@@ -37,12 +35,16 @@ npm run start:dev
 ### 3) 启动前端
 
 ```bash
-cd ../frontend
-npm i
-npm run dev
+pnpm --filter sheet-x-frontend dev
 ```
 
 前端默认：`http://localhost:5173`
+
+### 一键同时启动前后端（推荐）
+
+```bash
+pnpm dev
+```
 
 ---
 
@@ -59,10 +61,11 @@ npm run dev
 
 ## 3. 目录结构
 
-sheet-x/
-docker-compose.yml
-backend/   # NestJS + Prisma
-frontend/  # Vue3
+apps/
+  web/     # Vue 3 + Vite
+  server/  # NestJS + Prisma
+packages/
+  types/   # 前后端共享 TS 类型
 
 ---
 
