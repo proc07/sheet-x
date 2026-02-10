@@ -12,6 +12,76 @@ importers:
         specifier: ^2.5.4
         version: 2.8.3
 
+  apps/old-web:
+    dependencies:
+      '@primevue/themes':
+        specifier: ^4.5.4
+        version: 4.5.4
+      '@sheet-x/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      axios:
+        specifier: ^1.7.7
+        version: 1.13.5
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
+      pinia:
+        specifier: ^2.2.2
+        version: 2.3.1(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
+      primeicons:
+        specifier: ^7.0.0
+        version: 7.0.0
+      primevue:
+        specifier: ^4.5.4
+        version: 4.5.4(vue@3.5.28(typescript@5.9.3))
+      tailwindcss-primeui:
+        specifier: ^0.6.1
+        version: 0.6.1(tailwindcss@4.1.18)
+      vue:
+        specifier: ^3.5.0
+        version: 3.5.28(typescript@5.9.3)
+      vue-router:
+        specifier: ^4.4.3
+        version: 4.6.4(vue@3.5.28(typescript@5.9.3))
+    devDependencies:
+      '@primevue/auto-import-resolver':
+        specifier: ^4.5.4
+        version: 4.5.4
+      '@tailwindcss/postcss':
+        specifier: ^4.0.0
+        version: 4.1.18
+      '@types/node':
+        specifier: ^20.19.27
+        version: 20.19.33
+      '@vitejs/plugin-vue':
+        specifier: ^5.1.4
+        version: 5.2.4(vite@5.4.21(@types/node@20.19.33)(lightningcss@1.30.2)(terser@5.46.0))(vue@3.5.28(typescript@5.9.3))
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.4.24(postcss@8.5.6)
+      postcss:
+        specifier: ^8.4.47
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^4.0.0
+        version: 4.1.18
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      unplugin-vue-components:
+        specifier: ^0.27.0
+        version: 0.27.5(@babel/parser@7.29.0)(rollup@4.57.1)(vue@3.5.28(typescript@5.9.3))
+      vite:
+        specifier: ^5.4.5
+        version: 5.4.21(@types/node@20.19.33)(lightningcss@1.30.2)(terser@5.46.0)
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@20.19.33)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)
+      vue-tsc:
+        specifier: ^2.1.6
+        version: 2.2.12(typescript@5.9.3)
+
   apps/server:
     dependencies:
       '@aws-sdk/client-s3':
@@ -129,76 +199,6 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@20.19.33)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)
-
-  apps/web:
-    dependencies:
-      '@primevue/themes':
-        specifier: ^4.5.4
-        version: 4.5.4
-      '@sheet-x/types':
-        specifier: workspace:*
-        version: link:../../packages/types
-      axios:
-        specifier: ^1.7.7
-        version: 1.13.5
-      nanoid:
-        specifier: ^5.1.6
-        version: 5.1.6
-      pinia:
-        specifier: ^2.2.2
-        version: 2.3.1(typescript@5.9.3)(vue@3.5.28(typescript@5.9.3))
-      primeicons:
-        specifier: ^7.0.0
-        version: 7.0.0
-      primevue:
-        specifier: ^4.5.4
-        version: 4.5.4(vue@3.5.28(typescript@5.9.3))
-      tailwindcss-primeui:
-        specifier: ^0.6.1
-        version: 0.6.1(tailwindcss@4.1.18)
-      vue:
-        specifier: ^3.5.0
-        version: 3.5.28(typescript@5.9.3)
-      vue-router:
-        specifier: ^4.4.3
-        version: 4.6.4(vue@3.5.28(typescript@5.9.3))
-    devDependencies:
-      '@primevue/auto-import-resolver':
-        specifier: ^4.5.4
-        version: 4.5.4
-      '@tailwindcss/postcss':
-        specifier: ^4.0.0
-        version: 4.1.18
-      '@types/node':
-        specifier: ^20.19.27
-        version: 20.19.33
-      '@vitejs/plugin-vue':
-        specifier: ^5.1.4
-        version: 5.2.4(vite@5.4.21(@types/node@20.19.33)(lightningcss@1.30.2)(terser@5.46.0))(vue@3.5.28(typescript@5.9.3))
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.4.24(postcss@8.5.6)
-      postcss:
-        specifier: ^8.4.47
-        version: 8.5.6
-      tailwindcss:
-        specifier: ^4.0.0
-        version: 4.1.18
-      typescript:
-        specifier: ^5.5.4
-        version: 5.9.3
-      unplugin-vue-components:
-        specifier: ^0.27.0
-        version: 0.27.5(@babel/parser@7.29.0)(rollup@4.57.1)(vue@3.5.28(typescript@5.9.3))
-      vite:
-        specifier: ^5.4.5
-        version: 5.4.21(@types/node@20.19.33)(lightningcss@1.30.2)(terser@5.46.0)
-      vitest:
-        specifier: ^4.0.18
-        version: 4.0.18(@types/node@20.19.33)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)
-      vue-tsc:
-        specifier: ^2.1.6
-        version: 2.2.12(typescript@5.9.3)
 
   packages/types:
     devDependencies:

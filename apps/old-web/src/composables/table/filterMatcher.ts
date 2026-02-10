@@ -82,11 +82,13 @@ const FIELD_NORMALIZERS: Partial<Record<Field['type'], FieldNormalizer>> = {
     let effectiveValue = value;
     let effectiveFilterValue = filterValue;
 
-    if (effectiveValue?.text) {
-      effectiveValue = effectiveValue.text;
+    if (_isObjectLike(effectiveValue)) {
+      if ('link' in effectiveValue && (effectiveValue as any).link) effectiveValue = (effectiveValue as any).link;
+      else if ('text' in effectiveValue && (effectiveValue as any).text) effectiveValue = (effectiveValue as any).text;
     }
-    if (effectiveFilterValue?.text) {
-      effectiveFilterValue = effectiveFilterValue.text;
+    if (_isObjectLike(effectiveFilterValue)) {
+      if ('link' in effectiveFilterValue && (effectiveFilterValue as any).link) effectiveFilterValue = (effectiveFilterValue as any).link;
+      else if ('text' in effectiveFilterValue && (effectiveFilterValue as any).text) effectiveFilterValue = (effectiveFilterValue as any).text;
     }
 
     return { effectiveValue, effectiveFilterValue };
@@ -171,7 +173,6 @@ export function checkFilterMatch(value: any, filter: FilterCondition, field?: Fi
     if (operator === OP_CONTAINS) return _arrayContainsAll(effectiveValue, effectiveFilterValue);
     if (operator === OP_DOES_NOT_CONTAIN) return _arrayDoesNotContainAll(effectiveValue, effectiveFilterValue);
   }
-console.log( effectiveValue, effectiveFilterValue)
   const strValue = String(effectiveValue).toLowerCase();
   const strFilter = String(effectiveFilterValue).toLowerCase();
   switch (operator) {
