@@ -1,5 +1,12 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@sheet-x/shared": ["../../packages/shared/src/index.ts"]
+    }
+  },
   "files": [],
   "references": [
     { "path": "./.nuxt/tsconfig.app.json" },

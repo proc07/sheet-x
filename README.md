@@ -35,7 +35,7 @@ pnpm --filter sheet-x-backend dev
 ### 3) 启动前端
 
 ```bash
-pnpm --filter sheet-x-frontend dev
+pnpm --filter sheet-x-web dev
 ```
 
 前端默认：`http://localhost:5173`
@@ -62,10 +62,11 @@ pnpm dev
 ## 3. 目录结构
 
 apps/
-  web/     # Vue 3 + Vite
+  web/     # Nuxt Dashboard（Nuxt 4 + @nuxt/ui）
+  old-web/ # 旧版 Vue 3 + Vite（历史保留）
   server/  # NestJS + Prisma
 packages/
-  types/   # 前后端共享 TS 类型
+  shared/  # 共享包（types/constants/utils/interfaces/enums）
 
 ---
 

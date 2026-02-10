@@ -12,8 +12,7 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@sheet-x/types": ["../../packages/types/src/index.ts"],
-      "@sheet-x/types/*": ["../../packages/types/src/*"]
+      "@sheet-x/shared": ["../../packages/shared/src/index.ts"]
     },
     "incremental": true,
     "skipLibCheck": true

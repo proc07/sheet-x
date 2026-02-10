@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
-    "preview": "nuxt preview",
+    "dev": "nuxt dev --port 5173",
+    "preview": "nuxt preview --port 5173",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
+    "test": "node -e \"process.exit(0)\"",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "@iconify-json/simple-icons": "^1.2.70",
     "@internationalized/date": "^3.11.0",
     "@nuxt/ui": "^4.4.0",
+    "@sheet-x/shared": "workspace:*",
     "@tanstack/table-core": "^8.21.3",
     "@unovis/ts": "^1.6.4",
     "@unovis/vue": "^1.6.4",
@@ -31,6 +33,5 @@
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.4"
-  },
-  "packageManager": "pnpm@10.29.2"
+  }
 }

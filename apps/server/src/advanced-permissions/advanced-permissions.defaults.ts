@@ -1,5 +1,5 @@
 import type { BaseAdvancedPermissionConfig, BaseRole, PermissionLevel, TablePerm } from './advanced-permissions.types';
-import type { SystemRoleKey, WorkspaceRole } from '@sheet-x/types';
+import type { SystemRoleKey, WorkspaceRole } from '@sheet-x/shared';
 
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));

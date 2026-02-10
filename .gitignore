@@ -2,6 +2,8 @@ node_modules/
 dist/
 apps/server/uploads/
 .turbo/
+.nuxt/
+.output/
 
 .DS_Store
 .vscode/
