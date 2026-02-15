@@ -9,7 +9,10 @@
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "prisma:studio": "pnpm --filter sheet-x-backend prisma:studio",
+    "prisma:migrate": "pnpm --filter sheet-x-backend prisma:migrate",
+    "prisma:generate": "pnpm --filter sheet-x-backend prisma:generate"
   },
   "devDependencies": {
     "turbo": "^2.5.4"

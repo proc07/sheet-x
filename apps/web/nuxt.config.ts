@@ -3,8 +3,11 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@vueuse/nuxt'
+    '@vueuse/nuxt',
+    '@pinia/nuxt'
   ],
+
+  ssr: false,
 
   devtools: {
     enabled: true
@@ -16,6 +19,14 @@ export default defineNuxtConfig({
     '/api/**': {
       cors: true
     }
+  },
+
+  imports: {
+    dirs: [
+      'composables',
+      'utils',
+      'stores'
+    ]
   },
 
   compatibilityDate: '2024-07-11',
